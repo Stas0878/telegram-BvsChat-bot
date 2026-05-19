@@ -1,3 +1,31 @@
+// ========== ЗАЩИТА ОТ ПАДЕНИЙ (В САМОМ НАЧАЛЕ) ==========
+process.on('uncaughtException', (error) => {
+    console.error('❌ Непойманная ошибка:', error.message);
+    console.error(error.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Необработанный rejection:', reason);
+});
+
+// Автоматический перезапуск при падении
+if (!process.env.FROM_RESTART) {
+    process.env.FROM_RESTART = 'true';
+    process.on('exit', (code) => {
+        if (code !== 0) {
+            console.log('🔄 Перезапуск через 2 секунды...');
+            setTimeout(() => {
+                require('child_process').spawn(process.argv.shift(), process.argv, {
+                    cwd: process.cwd(),
+                    detached: true,
+                    stdio: 'inherit'
+                });
+            }, 2000);
+        }
+    });
+}
+// ========== КОНЕЦ ЗАЩИТЫ ==========
+
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const SmartRouter = require('./SmartRouter');
@@ -60,7 +88,7 @@ async function searchInternet(query) {
                     { role: 'user', content: `Найди актуальную информацию: ${query}. Дай ответ с работающими ссылками.` }
                 ],
                 temperature: 0.5,
-                max_tokens: 9000
+                max_tokens: 90000
             },
             {
                 headers: {
@@ -154,7 +182,7 @@ bot.onText(/\/start/, (msg) => {
             language: 'ru',
             voiceEnabled: false,
             temperature: 0.7,
-            maxTokens: 2048
+            maxTokens: 90048
         });
     }
     
