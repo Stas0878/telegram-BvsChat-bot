@@ -87,7 +87,7 @@ async function searchInternet(query) {
                     { role: 'user', content: `Найди актуальную информацию: ${query}. Дай ответ с работающими ссылками.` }
                 ],
                 temperature: 0.5,
-                max_tokens: 9000
+                max_tokens: 90000
             },
             {
                 headers: {
@@ -181,7 +181,7 @@ bot.onText(/\/start/, (msg) => {
             language: 'ru',
             voiceEnabled: false,
             temperature: 0.7,
-            maxTokens: 2048
+            maxTokens: 90048
         });
     }
     
