@@ -262,7 +262,7 @@ bot.onText(/\/search (.+)/, async (msg, match) => {
     bot.sendMessage(chatId, result, { parse_mode: 'Markdown', disable_web_page_preview: false });
 });
 
-// Команда /code - ПОЛНАЯ ВЕРСИЯ (без parse_mode, чтобы не было ошибки 400)
+// Команда /code - ПОЛНАЯ ВЕРСИЯ (с поддержкой --lang)
 bot.onText(/\/code (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const fullQuery = match[1];
@@ -306,7 +306,7 @@ bot.onText(/\/code (.+)/, async (msg, match) => {
         const response = await router.chat(prompt);
         const answer = response.choices[0].message.content;
         
-        await bot.sendMessage(chatId, answer);  // ← без parse_mode, но с сохранением форматирования
+        await bot.sendMessage(chatId, answer);
         console.log(`✅ Код отправлен для: ${task} на ${language}`);
     } catch(error) {
         console.log('❌ Ошибка кода:', error.message);
@@ -342,7 +342,7 @@ bot.onText(/\/voice/, (msg) => {
     
     bot.sendMessage(chatId, 
         settings.voiceEnabled ? 
-        '🎤 Голосовое сопровождение ВКЛЮЧЕНО! Я буду озвучивать ответы.' : 
+        '🎤 Голосовое сопровождение ВКЛЮЧЕНО!' : 
         '🎤 Голосовое сопровождение ВЫКЛЮЧЕНО.'
     );
 });
@@ -602,12 +602,25 @@ bot.on('message', async (msg) => {
         return;
     }
     
-    if (text === '🤖 Выбрать модель') {
+        if (text === '🤖 Выбрать модель') {
         bot.sendMessage(chatId,
             `🤖 *ТЕКУЩАЯ МОДЕЛЬ*\n━━━━━━━━━━━━━━━━━━━\n\n` +
-            `Автовыбор из 25+ бесплатных моделей\n` +
-            `DeepSeek-V3, Llama-3.1-405B, Qwen-3-80B, Mistral-7B\n\n` +
-            `Используйте /model для подробностей`,
+            `✨ *Доступные бесплатные модели:*\n\n` +
+            `🏆 *Топовые:*\n` +
+            `• Tencent Hy3 Preview (295B параметров, 256K контекста)\n` +
+            `• Google Gemma 4 31B (256K контекста, 140+ языков)\n` +
+            `• DeepSeek V4 Flash (1M контекста, быстрая)\n` +
+            `• NVIDIA Nemotron 3 Super (1M контекста, для агентов)\n\n` +
+            `💻 *Код и программирование:*\n` +
+            `• Qwen 3.6 Plus Preview (1M контекста)\n` +
+            `• Xiaomi MiMo V2 Pro (1M контекста)\n\n` +
+            `⚡ *Быстрые ответы:*\n` +
+            `• NVIDIA Nemotron Nano\n` +
+            `• Microsoft Phi-4 Mini\n\n` +
+            `🔍 *С интернет-поиском:*\n` +
+            `• Все модели с суффиксом :online\n\n` +
+            `✅ *Автовыбор:* Бот сам выбирает лучшую модель под задачу\n` +
+            `📊 *Подробнее:* /model`,
             { parse_mode: 'Markdown' }
         );
         return;
@@ -673,8 +686,11 @@ bot.on('message', async (msg) => {
         addToMemory(userId, 'assistant', answer);
         router.lastUsedModel = response.model;
         
-        await bot.sendMessage(chatId, answer);
-        console.log(`✅ Ответ отправлен`);
+        // Добавляем информацию о модели в ответ
+        const modelInfo = `\n\n---\n🤖 *Модель:* \`${response.model}\``;
+        
+        await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
+        console.log(`✅ Ответ отправлен, модель: ${response.model}`);
     } catch(error) {
         console.log('❌ ОШИБКА:', error.message);
         await bot.sendMessage(chatId, '❌ Ошибка, попробуйте позже');
