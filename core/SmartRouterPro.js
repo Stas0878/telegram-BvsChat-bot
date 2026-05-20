@@ -9,7 +9,7 @@ const AgentTools = require('./AgentTools');
 const TTLMemoryCache = require('../services/CacheService');
 const FileLogger = require('../services/LoggerService');
 const RateLimiter = require('../services/RateLimiter');
-const { UNLIMITED_FREE_MODELS } = require('./ModelsList');
+const ModelLibrary = require('./ModelLibrary');
 
 class SuperSmartRouterPro extends EventEmitter {
     constructor(apiKey, options = {}) {
@@ -44,7 +44,9 @@ class SuperSmartRouterPro extends EventEmitter {
             }
         } catch (error) {
             this.logger.warn('Failed to fetch models, using fallback', { error: error.message });
-            this.availableModels = new Set(Object.values(UNLIMITED_FREE_MODELS).flat());
+            // Используем ModelLibrary вместо UNLIMITED_FREE_MODELS
+            const allModels = Object.values(ModelLibrary.TEXT_MODELS).flat();
+            this.availableModels = new Set(allModels);
         }
     }
 
@@ -54,8 +56,18 @@ class SuperSmartRouterPro extends EventEmitter {
             await new Promise(resolve => setTimeout(resolve, 500));
             waited++;
         }
+        
+        // Определяем сложность через AgentTools
         const complexity = forceComplexity || AgentTools.estimateComplexity(prompt);
-        const candidates = UNLIMITED_FREE_MODELS[complexity] || UNLIMITED_FREE_MODELS.SIMPLE;
+        
+        // Получаем модели из ModelLibrary по сложности
+        let candidates = [];
+        if (ModelLibrary.TEXT_MODELS && ModelLibrary.TEXT_MODELS[complexity]) {
+            candidates = ModelLibrary.TEXT_MODELS[complexity];
+        } else {
+            candidates = ModelLibrary.TEXT_MODELS?.MODERATE || ['openrouter/free'];
+        }
+        
         for (const model of candidates) {
             if (this.availableModels.has(model)) return model;
         }
