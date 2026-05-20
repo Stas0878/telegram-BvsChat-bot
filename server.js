@@ -242,12 +242,14 @@ bot.onText(/\/model/, async (msg) => {
         `• Оцениваю длину текста\n` +
         `• Проверяю наличие кода\n` +
         `• Понимаю логические задачи\n\n` +
-        `🏆 *Доступные модели:*\n` +
-        `• DeepSeek-V3 (очень сложные задачи)\n` +
-        `• Llama-3.1-405B (экспертный уровень)\n` +
-        `• Qwen-3-80B (сложный код)\n` +
-        `• Mistral-7B (быстрые ответы)\n\n` +
-        `✨ *Все модели бесплатны!*`,
+        `🏆 *Доступные бесплатные модели:*\n` +
+        `• Tencent Hy3 Preview (295B, 256K контекста) - ТОП-1\n` +
+        `• Google Gemma 4 31B (256K, 140+ языков)\n` +
+        `• DeepSeek V4 Flash (1M контекста, быстрая)\n` +
+        `• NVIDIA Nemotron 3 Super (1M контекста, для агентов)\n` +
+        `• Qwen 3.6 Plus Preview (1M контекста, код)\n` +
+        `• Xiaomi MiMo V2 Pro (1M контекста)\n\n` +
+        `✨ *Все модели бесплатны и с поддержкой интернета!*`,
         { parse_mode: 'Markdown' }
     );
 });
@@ -262,7 +264,7 @@ bot.onText(/\/search (.+)/, async (msg, match) => {
     bot.sendMessage(chatId, result, { parse_mode: 'Markdown', disable_web_page_preview: false });
 });
 
-// Команда /code - ПОЛНАЯ ВЕРСИЯ (с поддержкой --lang)
+// Команда /code - ПОЛНАЯ ВЕРСИЯ с умной отправкой
 bot.onText(/\/code (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const fullQuery = match[1];
@@ -304,10 +306,24 @@ bot.onText(/\/code (.+)/, async (msg, match) => {
 [предупреждения]`;
         
         const response = await router.chat(prompt);
-        const answer = response.choices[0].message.content;
+        let answer = response.choices[0].message.content;
         
-        await bot.sendMessage(chatId, answer);
-        console.log(`✅ Код отправлен для: ${task} на ${language}`);
+        const MAX_CHAT_LENGTH = 9999;
+        
+        if (answer.length > MAX_CHAT_LENGTH) {
+            // Отправляем как файл
+            const codeBuffer = Buffer.from(answer, 'utf-8');
+            await bot.sendDocument(chatId, codeBuffer, {}, {
+                filename: `code.${language === 'python' ? 'py' : language}`,
+                contentType: 'text/plain',
+                caption: `💻 Код для: ${task}\n📦 Размер: ${answer.length} символов`
+            });
+            console.log(`✅ Код отправлен как файл (${answer.length} символов)`);
+        } else {
+            // Отправляем в чат
+            await bot.sendMessage(chatId, answer);
+            console.log(`✅ Код отправлен в чат (${answer.length} символов)`);
+        }
     } catch(error) {
         console.log('❌ Ошибка кода:', error.message);
         await bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
