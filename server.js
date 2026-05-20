@@ -174,8 +174,7 @@ app.get('/', (req, res) => {
 // Команда /start - ПОЛНОЕ ПРИВЕТСТВИЕ
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    const userId = msg.from.id;
-    
+    const userId = msg.from.id    
     if (!userSettings.has(userId)) {
         userSettings.set(userId, {
             language: 'ru',
@@ -263,7 +262,7 @@ bot.onText(/\/search (.+)/, async (msg, match) => {
     bot.sendMessage(chatId, result, { parse_mode: 'Markdown', disable_web_page_preview: false });
 });
 
-// Команда /code
+// ИСПРАВЛЕННАЯ КОМАНДА /code
 bot.onText(/\/code (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const fullQuery = match[1];
@@ -278,8 +277,18 @@ bot.onText(/\/code (.+)/, async (msg, match) => {
     }
     
     await bot.sendChatAction(chatId, 'typing');
-    const code = await generateCode(task, language);
-    bot.sendMessage(chatId, code, { parse_mode: 'Markdown' });
+    
+    try {
+        // Прямой вызов router.chat вместо generateCode
+        const prompt = `Напиши код на языке ${language} по задаче: ${task}. Дай рабочий код с комментариями на русском языке.`;
+        const response = await router.chat(prompt);
+        const code = response.choices[0].message.content;
+        bot.sendMessage(chatId, code, { parse_mode: 'Markdown' });
+        console.log(`✅ Код сгенерирован для: ${task} на ${language}`);
+    } catch(error) {
+        console.log('❌ Ошибка кода:', error.message);
+        bot.sendMessage(chatId, `❌ Ошибка генерации кода: ${error.message}`);
+    }
 });
 
 // Команда /lang
