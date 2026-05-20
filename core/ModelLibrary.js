@@ -25,16 +25,17 @@ class ModelLibrary {
       'openrouter/quasar-alpha:online',
       'nvidia/nemotron-3-super:free:online',
     ],
-    VERY_COMPLEX: [
+        VERY_COMPLEX: [
       'tencent/hy3-preview:free:online',
       'nvidia/nemotron-3-super:free:online',
       'xiaomi/mimo-v2-pro:free:online',
       'deepseek/deepseek-v3:free:online',
+      'qwen/qwen3.6-plus-preview:free:online',
+      'google/gemini-3-pro-preview:free',
     ],
-  };
 
   // ===== МОДЕЛИ ДЛЯ ИЗОБРАЖЕНИЙ =====
-  static IMAGE_MODELS = {
+    static IMAGE_MODELS = {
     GENERATION: [
       'stabilityai/stable-diffusion-xl:free',
       'stabilityai/stable-diffusion-3:free',
@@ -43,6 +44,7 @@ class ModelLibrary {
     ],
     ANALYSIS: [
       'google/gemini-1.5-pro-vision:free',
+      'google/gemini-3-pro-vision:free',
       'llava-1.5-vision:free',
       'cogvlm-17b:free',
     ],
