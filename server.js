@@ -262,20 +262,52 @@ bot.onText(/\/search (.+)/, async (msg, match) => {
     bot.sendMessage(chatId, result, { parse_mode: 'Markdown', disable_web_page_preview: false });
 });
 
-// Команда /code - ИСПРАВЛЕННАЯ
+// Команда /code - ПОЛНАЯ ВЕРСИЯ (без parse_mode, чтобы не было ошибки 400)
 bot.onText(/\/code (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    const task = match[1];
+    const fullQuery = match[1];
+    
+    let language = 'python';
+    let task = fullQuery;
+    
+    const langMatch = fullQuery.match(/--lang (\w+)/);
+    if (langMatch) {
+        language = langMatch[1];
+        task = fullQuery.replace(/--lang \w+/, '').trim();
+    }
     
     await bot.sendChatAction(chatId, 'typing');
     
     try {
-        const prompt = `Напиши код на Python для задачи: ${task}. Дай рабочий код с комментариями на русском языке. Пример использования в конце.`;
+        const prompt = `Напиши код на языке ${language} по задаче: ${task}
+
+Требования:
+1. Код должен быть рабочим и оптимизированным
+2. Добавь комментарии на русском языке
+3. Объясни алгоритм работы
+4. Приведи пример использования
+5. Укажи возможные ошибки
+
+Формат ответа:
+📝 Описание решения:
+[объяснение]
+
+💻 Код:
+\`\`\`${language}
+[код]
+\`\`\`
+
+🔧 Пример использования:
+[пример]
+
+⚠️ Важно:
+[предупреждения]`;
+        
         const response = await router.chat(prompt);
         const answer = response.choices[0].message.content;
         
-        await bot.sendMessage(chatId, answer, { parse_mode: 'Markdown' });
-        console.log(`✅ Код отправлен для: ${task}`);
+        await bot.sendMessage(chatId, answer);  // ← без parse_mode, но с сохранением форматирования
+        console.log(`✅ Код отправлен для: ${task} на ${language}`);
     } catch(error) {
         console.log('❌ Ошибка кода:', error.message);
         await bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
