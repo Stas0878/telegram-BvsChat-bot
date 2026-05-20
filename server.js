@@ -602,7 +602,7 @@ bot.on('message', async (msg) => {
         return;
     }
     
-        if (text === '🤖 Выбрать модель') {
+    if (text === '🤖 Выбрать модель') {
         bot.sendMessage(chatId,
             `🤖 *ТЕКУЩАЯ МОДЕЛЬ*\n━━━━━━━━━━━━━━━━━━━\n\n` +
             `✨ *Доступные бесплатные модели:*\n\n` +
@@ -677,7 +677,8 @@ bot.on('message', async (msg) => {
     
     // Обычные сообщения - с контекстом и памятью
     try {
-        await bot.sendChatAction(chatId, 'typing');
+        // Отправляем временное сообщение "Думаю..."
+        const thinkingMsg = await bot.sendMessage(chatId, '🤔 *Думаю...*', { parse_mode: 'Markdown' });
         
         addToMemory(userId, 'user', text);
         const contextMessage = getDialogContext(userId, text);
@@ -686,9 +687,10 @@ bot.on('message', async (msg) => {
         addToMemory(userId, 'assistant', answer);
         router.lastUsedModel = response.model;
         
-        // Добавляем информацию о модели в ответ
-        const modelInfo = `\n\n---\n🤖 *Модель:* \`${response.model}\``;
+        // Удаляем временное сообщение
+        await bot.deleteMessage(chatId, thinkingMsg.message_id);
         
+        const modelInfo = `\n\n---\n🤖 *Модель:* \`${response.model}\``;
         await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
         console.log(`✅ Ответ отправлен, модель: ${response.model}`);
     } catch(error) {
