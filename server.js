@@ -262,32 +262,23 @@ bot.onText(/\/search (.+)/, async (msg, match) => {
     bot.sendMessage(chatId, result, { parse_mode: 'Markdown', disable_web_page_preview: false });
 });
 
-// ИСПРАВЛЕННАЯ КОМАНДА /code
+// Команда /code - ИСПРАВЛЕННАЯ
 bot.onText(/\/code (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    const fullQuery = match[1];
-    
-    let language = 'python';
-    let task = fullQuery;
-    
-    const langMatch = fullQuery.match(/--lang (\w+)/);
-    if (langMatch) {
-        language = langMatch[1];
-        task = fullQuery.replace(/--lang \w+/, '').trim();
-    }
+    const task = match[1];
     
     await bot.sendChatAction(chatId, 'typing');
     
     try {
-        // Прямой вызов router.chat вместо generateCode
-        const prompt = `Напиши код на языке ${language} по задаче: ${task}. Дай рабочий код с комментариями на русском языке.`;
+        const prompt = `Напиши код на Python для задачи: ${task}. Дай рабочий код с комментариями на русском языке. Пример использования в конце.`;
         const response = await router.chat(prompt);
-        const code = response.choices[0].message.content;
-        bot.sendMessage(chatId, code, { parse_mode: 'Markdown' });
-        console.log(`✅ Код сгенерирован для: ${task} на ${language}`);
+        const answer = response.choices[0].message.content;
+        
+        await bot.sendMessage(chatId, answer, { parse_mode: 'Markdown' });
+        console.log(`✅ Код отправлен для: ${task}`);
     } catch(error) {
         console.log('❌ Ошибка кода:', error.message);
-        bot.sendMessage(chatId, `❌ Ошибка генерации кода: ${error.message}`);
+        await bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
     }
 });
 
