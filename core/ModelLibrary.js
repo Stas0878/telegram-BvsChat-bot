@@ -25,7 +25,7 @@ class ModelLibrary {
       'openrouter/quasar-alpha:online',
       'nvidia/nemotron-3-super:free:online',
     ],
-        VERY_COMPLEX: [
+    VERY_COMPLEX: [
       'tencent/hy3-preview:free:online',
       'nvidia/nemotron-3-super:free:online',
       'xiaomi/mimo-v2-pro:free:online',
@@ -33,9 +33,10 @@ class ModelLibrary {
       'qwen/qwen3.6-plus-preview:free:online',
       'google/gemini-3-pro-preview:free',
     ],
+  };  // ← ЗДЕСЬ ЗАКРЫВАЕТСЯ TEXT_MODELS
 
   // ===== МОДЕЛИ ДЛЯ ИЗОБРАЖЕНИЙ =====
-    static IMAGE_MODELS = {
+  static IMAGE_MODELS = {
     GENERATION: [
       'stabilityai/stable-diffusion-xl:free',
       'stabilityai/stable-diffusion-3:free',
