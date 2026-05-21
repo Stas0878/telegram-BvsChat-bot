@@ -652,7 +652,7 @@ bot.on('message', async (msg) => {
         return;
     }
     
-    // Пропускаем команды
+        // Пропускаем команды
     if (text.startsWith('/')) return;
     
     // Обычные сообщения - с контекстом и памятью
@@ -672,7 +672,7 @@ bot.on('message', async (msg) => {
         
         const modelInfo = `\n\n---\n🤖 *Модель:* \`${response.model}\``;
         await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
-                        console.log(`✅ Ответ отправлен, модель: ${response.model}`);
+        console.log(`✅ Ответ отправлен, модель: ${response.model}`);
     } catch(error) {
         console.log('❌ ОШИБКА:', error.message);
         await bot.sendMessage(chatId, '❌ Ошибка, попробуйте позже');
@@ -694,8 +694,7 @@ bot.onText(/\/image (.+)/, async (msg, match) => {
                 model: 'black-forest-labs/flux-1-schnell:free',
                 messages: [
                     { role: 'user', content: prompt }
-                ],
-                modalities: ['image', 'text']
+                ]
             },
             {
                 headers: {
@@ -706,13 +705,25 @@ bot.onText(/\/image (.+)/, async (msg, match) => {
             }
         );
         
-        const imageUrl = response.data.choices[0].message.images[0].url;
+        let imageUrl = null;
         
-        await bot.sendPhoto(chatId, imageUrl, { caption: `✨ ${prompt}` });
-        console.log(`✅ Изображение сгенерировано для: ${prompt}`);
+        if (response.data.choices[0].message.images && response.data.choices[0].message.images[0]) {
+            imageUrl = response.data.choices[0].message.images[0].url;
+        } else if (response.data.choices[0].message.content) {
+            const content = response.data.choices[0].message.content;
+            const urlMatch = content.match(/https?:\/\/[^\s]+\.(jpg|png|gif|webp)/i);
+            if (urlMatch) imageUrl = urlMatch[0];
+        }
+        
+        if (imageUrl) {
+            await bot.sendPhoto(chatId, imageUrl, { caption: `✨ ${prompt}` });
+            console.log(`✅ Изображение сгенерировано для: ${prompt}`);
+        } else {
+            bot.sendMessage(chatId, `❌ Не удалось получить изображение. Ответ модели:\n${response.data.choices[0].message.content.substring(0, 200)}`);
+        }
     } catch(error) {
-        console.log('❌ Ошибка генерации:', error.message);
-        bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
+        console.log('❌ Ошибка генерации:', error.response?.data || error.message);
+        bot.sendMessage(chatId, `❌ Ошибка: ${error.response?.data?.error || error.message}`);
     }
 });
 
