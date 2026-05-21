@@ -156,9 +156,9 @@ const fullMenu = {
         keyboard: [
             [{ text: "🤖 Что умеет бот" }, { text: "📊 Статистика" }],
             [{ text: "👤 Мой профиль" }, { text: "🔧 Tools" }],
-            [{ text: "🎨 Создать изображение" }, { text: "🎵 Создать музыку" }],
-            [{ text: "🎬 Создать видео" }, { text: "🔍 Интернет-поиск" }],
-            [{ text: "🤖 Выбрать модель" }, { text: "⚙️ Настройки" }],
+            [{ text: "✨ Gemini" }, { text: "🎨 Создать изображение" }],  // ← НОВАЯ КНОПКА
+            [{ text: "🎵 Создать музыку" }, { text: "🎬 Создать видео" }],
+            [{ text: "🔍 Интернет-поиск" }, { text: "⚙️ Настройки" }],
             [{ text: "🗑️ Удалить контекст" }, { text: "📜 Соглашение" }],
             [{ text: "📋 Закрыть меню" }]
         ],
@@ -501,7 +501,7 @@ bot.on('message', async (msg) => {
         return;
     }
     
-    // Обработка команды Tools
+        // Обработка команды Tools
     if (text === '🔧 Tools') {
         bot.sendMessage(chatId,
             `🔧 *ДОСТУПНЫЕ ИНСТРУМЕНТЫ*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
@@ -512,7 +512,8 @@ bot.on('message', async (msg) => {
             `🔓 /decode - Base64 декодирование\n` +
             `🔗 /url - Проверка URL\n` +
             `🎲 /random - Случайное число\n` +
-            `📅 /date - Текущая дата\n\n` +
+            `📅 /date - Текущая дата\n` +
+            `✨ /gemini вопрос - Google Gemini 2.0 Flash\n\n` +
             `✨ *Все команды бесплатны!*`,
             { parse_mode: 'Markdown' }
         );
@@ -567,7 +568,7 @@ bot.on('message', async (msg) => {
         return;
     }
     
-    if (text === '🤖 Что умеет бот') {
+        if (text === '🤖 Что умеет бот') {
         bot.sendMessage(chatId,
             `✨ *ВОЗМОЖНОСТИ БОТА*\n━━━━━━━━━━━━━━━━━━━\n\n` +
             `🧠 *Феноменальная память* - помню ВСЁ\n` +
@@ -577,6 +578,22 @@ bot.on('message', async (msg) => {
             `🎤 *Голосовое сопровождение* - озвучиваю ответы\n` +
             `📊 *Статистика* - слежу за использованием\n` +
             `🤖 *Умный выбор модели* - автовыбор лучшей AI`,
+            { parse_mode: 'Markdown' }
+        );
+        return;
+    }
+    
+    if (text === '✨ Gemini') {
+        bot.sendMessage(chatId, 
+            `✨ *Google Gemini 2.0 Flash*\n\n` +
+            `Отправьте вопрос после команды:\n` +
+            `/gemini [ваш вопрос]\n\n` +
+            `📝 *Пример:*\n` +
+            `/gemini Расскажи о теории относительности\n\n` +
+            `🔑 *Особенности:*\n` +
+            `• Быстрые ответы\n` +
+            `• Актуальные знания\n` +
+            `• Бесплатно через Google API`,
             { parse_mode: 'Markdown' }
         );
         return;
@@ -707,6 +724,37 @@ bot.onText(/\/image (.+)/, async (msg, match) => {
     } catch(error) {
         console.error('❌ Ошибка при генерации изображения:', error);
         await bot.sendMessage(chatId, `❌ Не удалось сгенерировать изображение. Попробуйте изменить запрос. Ошибка: ${error.message}`);
+    }
+});
+
+// Команда /gemini - прямой вызов Google Gemini 2.0 Flash
+bot.onText(/\/gemini (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const prompt = match[1];
+    
+    await bot.sendChatAction(chatId, 'typing');
+    
+    try {
+        const response = await axios.post(
+            `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+            {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 9948
+                }
+            }
+        );
+        
+        const answer = response.data.candidates[0].content.parts[0].text;
+        const modelInfo = `\n\n---\n🤖 *Модель:* Gemini 2.0 Flash (Google)`;
+        
+        await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
+        console.log(`✅ Gemini ответил: ${prompt.substring(0, 50)}`);
+    } catch(error) {
+        console.error('Gemini error:', error.response?.data || error.message);
+        const errorMsg = error.response?.data?.error?.message || error.message;
+        await bot.sendMessage(chatId, `❌ Ошибка Gemini: ${errorMsg}`);
     }
 });
 
