@@ -672,10 +672,47 @@ bot.on('message', async (msg) => {
         
         const modelInfo = `\n\n---\n🤖 *Модель:* \`${response.model}\``;
         await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
-        console.log(`✅ Ответ отправлен, модель: ${response.model}`);
+                        console.log(`✅ Ответ отправлен, модель: ${response.model}`);
     } catch(error) {
         console.log('❌ ОШИБКА:', error.message);
         await bot.sendMessage(chatId, '❌ Ошибка, попробуйте позже');
+    }
+});
+
+// Команда /image - генерация изображения
+bot.onText(/\/image (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const prompt = match[1];
+    
+    await bot.sendChatAction(chatId, 'upload_photo');
+    bot.sendMessage(chatId, `🎨 Генерирую изображение: "${prompt}"...`);
+    
+    try {
+        const response = await axios.post(
+            'https://openrouter.ai/api/v1/chat/completions',
+            {
+                model: 'black-forest-labs/flux-1-schnell:free',
+                messages: [
+                    { role: 'user', content: prompt }
+                ],
+                modalities: ['image', 'text']
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${OPENROUTER_KEY}`,
+                    'HTTP-Referer': 'https://t.me/smart_ai_bot',
+                    'X-Title': 'Smart AI Bot'
+                }
+            }
+        );
+        
+        const imageUrl = response.data.choices[0].message.images[0].url;
+        
+        await bot.sendPhoto(chatId, imageUrl, { caption: `✨ ${prompt}` });
+        console.log(`✅ Изображение сгенерировано для: ${prompt}`);
+    } catch(error) {
+        console.log('❌ Ошибка генерации:', error.message);
+        bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
     }
 });
 
