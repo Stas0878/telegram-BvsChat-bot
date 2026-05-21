@@ -87,7 +87,7 @@ async function searchInternet(query) {
                     { role: 'user', content: `Найди актуальную информацию: ${query}. Дай ответ с работающими ссылками.` }
                 ],
                 temperature: 0.5,
-                max_tokens: 90000
+                max_tokens: 9000
             },
             {
                 headers: {
@@ -171,16 +171,17 @@ app.get('/', (req, res) => {
     res.send('Бот работает с феноменальной памятью!');
 });
 
-// Команда /start - ПОЛНОЕ ПРИВЕТСТВИЕ
+// Команда /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    const userId = msg.from.id    
+    const userId = msg.from.id;
+    
     if (!userSettings.has(userId)) {
         userSettings.set(userId, {
             language: 'ru',
             voiceEnabled: false,
             temperature: 0.7,
-            maxTokens: 90048
+            maxTokens: 2048
         });
     }
     
@@ -264,7 +265,7 @@ bot.onText(/\/search (.+)/, async (msg, match) => {
     bot.sendMessage(chatId, result, { parse_mode: 'Markdown', disable_web_page_preview: false });
 });
 
-// Команда /code - ПОЛНАЯ ВЕРСИЯ с умной отправкой
+// Команда /code
 bot.onText(/\/code (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const fullQuery = match[1];
@@ -279,55 +280,8 @@ bot.onText(/\/code (.+)/, async (msg, match) => {
     }
     
     await bot.sendChatAction(chatId, 'typing');
-    
-    try {
-        const prompt = `Напиши код на языке ${language} по задаче: ${task}
-
-Требования:
-1. Код должен быть рабочим и оптимизированным
-2. Добавь комментарии на русском языке
-3. Объясни алгоритм работы
-4. Приведи пример использования
-5. Укажи возможные ошибки
-
-Формат ответа:
-📝 Описание решения:
-[объяснение]
-
-💻 Код:
-\`\`\`${language}
-[код]
-\`\`\`
-
-🔧 Пример использования:
-[пример]
-
-⚠️ Важно:
-[предупреждения]`;
-        
-        const response = await router.chat(prompt);
-        let answer = response.choices[0].message.content;
-        
-        const MAX_CHAT_LENGTH = 9999;
-        
-        if (answer.length > MAX_CHAT_LENGTH) {
-            // Отправляем как файл
-            const codeBuffer = Buffer.from(answer, 'utf-8');
-            await bot.sendDocument(chatId, codeBuffer, {}, {
-                filename: `code.${language === 'python' ? 'py' : language}`,
-                contentType: 'text/plain',
-                caption: `💻 Код для: ${task}\n📦 Размер: ${answer.length} символов`
-            });
-            console.log(`✅ Код отправлен как файл (${answer.length} символов)`);
-        } else {
-            // Отправляем в чат
-            await bot.sendMessage(chatId, answer);
-            console.log(`✅ Код отправлен в чат (${answer.length} символов)`);
-        }
-    } catch(error) {
-        console.log('❌ Ошибка кода:', error.message);
-        await bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
-    }
+    const code = await generateCode(task, language);
+    bot.sendMessage(chatId, code, { parse_mode: 'Markdown' });
 });
 
 // Команда /lang
@@ -358,7 +312,7 @@ bot.onText(/\/voice/, (msg) => {
     
     bot.sendMessage(chatId, 
         settings.voiceEnabled ? 
-        '🎤 Голосовое сопровождение ВКЛЮЧЕНО!' : 
+        '🎤 Голосовое сопровождение ВКЛЮЧЕНО! Я буду озвучивать ответы.' : 
         '🎤 Голосовое сопровождение ВЫКЛЮЧЕНО.'
     );
 });
