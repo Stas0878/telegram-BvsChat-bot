@@ -501,7 +501,7 @@ bot.on('message', async (msg) => {
         return;
     }
     
-        // Обработка команды Tools
+            // Обработка команды Tools
     if (text === '🔧 Tools') {
         bot.sendMessage(chatId,
             `🔧 *ДОСТУПНЫЕ ИНСТРУМЕНТЫ*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
@@ -515,6 +515,23 @@ bot.on('message', async (msg) => {
             `📅 /date - Текущая дата\n` +
             `✨ /gemini вопрос - Google Gemini 2.0 Flash\n\n` +
             `✨ *Все команды бесплатны!*`,
+            { parse_mode: 'Markdown' }
+        );
+        return;
+    }
+    
+    // Обработка кнопки Gemini
+    if (text === '✨ Gemini') {
+        bot.sendMessage(chatId, 
+            `✨ *Google Gemini 2.0 Flash*\n\n` +
+            `Отправьте вопрос после команды:\n` +
+            `/gemini [ваш вопрос]\n\n` +
+            `📝 *Пример:*\n` +
+            `/gemini Расскажи о теории относительности\n\n` +
+            `🔑 *Особенности:*\n` +
+            `• Быстрые ответы\n` +
+            `• Актуальные знания\n` +
+            `• Бесплатно через OpenRouter`,
             { parse_mode: 'Markdown' }
         );
         return;
@@ -727,7 +744,7 @@ bot.onText(/\/image (.+)/, async (msg, match) => {
     }
 });
 
-// Команда /gemini - прямой вызов Google Gemini 2.0 Flash
+// Команда /gemini - через OpenRouter (без проблем с квотой)
 bot.onText(/\/gemini (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const prompt = match[1];
@@ -735,26 +752,15 @@ bot.onText(/\/gemini (.+)/, async (msg, match) => {
     await bot.sendChatAction(chatId, 'typing');
     
     try {
-        const response = await axios.post(
-            `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`,
-            {
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 9948
-                }
-            }
-        );
-        
-        const answer = response.data.candidates[0].content.parts[0].text;
-        const modelInfo = `\n\n---\n🤖 *Модель:* Gemini 2.0 Flash (Google)`;
+        const response = await router.chat(prompt, { model: 'google/gemini-2.0-flash-exp:free' });
+        const answer = response.choices[0].message.content;
+        const modelInfo = `\n\n---\n🤖 *Модель:* Gemini 2.0 Flash (Google, OpenRouter)`;
         
         await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
         console.log(`✅ Gemini ответил: ${prompt.substring(0, 50)}`);
     } catch(error) {
-        console.error('Gemini error:', error.response?.data || error.message);
-        const errorMsg = error.response?.data?.error?.message || error.message;
-        await bot.sendMessage(chatId, `❌ Ошибка Gemini: ${errorMsg}`);
+        console.error('❌ Ошибка Gemini:', error.message);
+        await bot.sendMessage(chatId, `❌ Ошибка Gemini: ${error.message}`);
     }
 });
 
