@@ -19,7 +19,7 @@ if (!process.env.FROM_RESTART) {
                     detached: true,
                     stdio: 'inherit'
                 });
-            }, 9000);
+            }, 9999);
         }
     });
 }
@@ -87,7 +87,7 @@ async function searchInternet(query) {
                     { role: 'user', content: `Найди актуальную информацию: ${query}. Дай ответ с работающими ссылками.` }
                 ],
                 temperature: 0.5,
-                max_tokens: 4000
+                max_tokens: 9999
             },
             {
                 headers: {
@@ -278,20 +278,21 @@ bot.onText(/\/search (.+)/, async (msg, match) => {
 // Команда /code
 bot.onText(/\/code (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    const fullQuery = match[1];
-    
-    let language = 'python';
-    let task = fullQuery;
-    
-    const langMatch = fullQuery.match(/--lang (\w+)/);
-    if (langMatch) {
-        language = langMatch[1];
-        task = fullQuery.replace(/--lang \w+/, '').trim();
-    }
+    const task = match[1];
     
     await bot.sendChatAction(chatId, 'typing');
-    const code = await generateCode(task, language);
-    bot.sendMessage(chatId, code, { parse_mode: 'Markdown' });
+    
+    try {
+        const prompt = `Напиши код на Python для задачи: ${task}. Дай рабочий код с комментариями на русском языке. Пример использования в конце.`;
+        const response = await router.chat(prompt);
+        const answer = response.choices[0].message.content;
+        
+        await bot.sendMessage(chatId, answer, { parse_mode: 'Markdown' });
+        console.log(`✅ Код отправлен для: ${task}`);
+    } catch(error) {
+        console.log('❌ Ошибка кода:', error.message);
+        await bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
+    }
 });
 
 // Команда /lang
@@ -689,29 +690,65 @@ bot.on('message', async (msg) => {
         // Пропускаем команды
     if (text.startsWith('/')) return;
     
-    // Обычные сообщения - с контекстом и памятью
+        // Обычные сообщения - с контекстом и памятью
     try {
         // Отправляем временное сообщение "Думаю..."
         const thinkingMsg = await bot.sendMessage(chatId, '🤔 *Думаю...*', { parse_mode: 'Markdown' });
         
         addToMemory(userId, 'user', text);
         const contextMessage = getDialogContext(userId, text);
-        const response = await router.chat(contextMessage);
-        const answer = response.choices[0].message.content;
+        
+        // Список моделей для fallback (по порядку)
+        const fallbackModels = [
+            'google/gemma-4-31b-it:free:online',      // Gemma 4 31B
+            'deepseek/deepseek-v4-flash:free:online',  // DeepSeek V4 Flash
+            'qwen/qwen3.6-plus-preview:free:online',  // Qwen 3.6 Plus
+            'tencent/hy3-preview:free:online',        // Tencent Hy3
+            'xiaomi/mimo-v2.5-pro:free'               // Xiaomi MiMo V2.5 Pro
+        ];
+        
+        let answer = null;
+        let usedModel = null;
+        
+        // Пробуем каждую модель по очереди
+        for (const model of fallbackModels) {
+            try {
+                console.log(`🔄 Пробуем модель: ${model}`);
+                const response = await router.chat(contextMessage, { model: model });
+                const candidateAnswer = response.choices[0].message.content;
+                
+                if (candidateAnswer && candidateAnswer !== 'null' && candidateAnswer.trim() !== '') {
+                    answer = candidateAnswer;
+                    usedModel = model;
+                    console.log(`✅ Модель ${model} ответила успешно`);
+                    break;
+                } else {
+                    console.log(`⚠️ Модель ${model} вернула пустой ответ`);
+                }
+            } catch(e) {
+                console.log(`❌ Модель ${model} ошиблась: ${e.message}`);
+            }
+        }
+        
+        // Если ни одна модель не ответила
+        if (!answer) {
+            answer = "Извините, все модели временно недоступны. Попробуйте позже.";
+            usedModel = "none";
+        }
+        
         addToMemory(userId, 'assistant', answer);
-        router.lastUsedModel = response.model;
+        router.lastUsedModel = usedModel;
         
         // Удаляем временное сообщение
         await bot.deleteMessage(chatId, thinkingMsg.message_id);
         
-        const modelInfo = `\n\n---\n🤖 *Модель:* \`${response.model}\``;
+        const modelInfo = `\n\n---\n🤖 *Модель:* \`${usedModel}\``;
         await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
-        console.log(`✅ Ответ отправлен, модель: ${response.model}`);
+        console.log(`✅ Ответ отправлен, модель: ${usedModel}`);
     } catch(error) {
         console.log('❌ ОШИБКА:', error.message);
         await bot.sendMessage(chatId, '❌ Ошибка, попробуйте позже');
     }
-});
 
 // Команда /image - генерация изображения через Pollinations.ai (бесплатно, без ключа)
 bot.onText(/\/image (.+)/, async (msg, match) => {
