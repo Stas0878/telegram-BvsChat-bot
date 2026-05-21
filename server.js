@@ -87,7 +87,7 @@ async function searchInternet(query) {
                     { role: 'user', content: `Найди актуальную информацию: ${query}. Дай ответ с работающими ссылками.` }
                 ],
                 temperature: 0.5,
-                max_tokens: 9000
+                max_tokens: 99999
             },
             {
                 headers: {
@@ -181,7 +181,7 @@ bot.onText(/\/start/, (msg) => {
             language: 'ru',
             voiceEnabled: false,
             temperature: 0.7,
-            maxTokens: 2048
+            maxTokens: 99948
         });
     }
     
@@ -233,24 +233,34 @@ bot.onText(/\/stats/, async (msg) => {
 bot.onText(/\/model/, async (msg) => {
     const lastModel = router.lastUsedModel || 'openrouter/free';
     
+    // Получаем дополнительную информацию о модели
+    let modelDescription = '';
+    if (lastModel.includes('tencent/hy3-preview')) modelDescription = 'Tencent Hy3 Preview - 295B параметров, 256K контекста, топ-1 бесплатная модель';
+    else if (lastModel.includes('google/gemma-4-31b')) modelDescription = 'Google Gemma 4 31B - 256K контекста, 140+ языков, мультимодальная';
+    else if (lastModel.includes('deepseek/deepseek-v4-flash')) modelDescription = 'DeepSeek V4 Flash - 284B параметров, 1M контекста, быстрая';
+    else if (lastModel.includes('nvidia/nemotron-3-super')) modelDescription = 'NVIDIA Nemotron 3 Super - 120B параметров, 1M контекста, для агентов';
+    else if (lastModel.includes('qwen/qwen3.6-plus-preview')) modelDescription = 'Qwen 3.6 Plus Preview - 1M контекста, код и фронтенд';
+    else if (lastModel.includes('xiaomi/mimo-v2-pro')) modelDescription = 'Xiaomi MiMo V2 Pro - 1M контекста, флагманская модель';
+    else if (lastModel.includes('nvidia/nemotron-3-nano-30b-a3b')) modelDescription = 'NVIDIA Nemotron 3 Nano - 30B параметров, сбалансированная';
+    else if (lastModel.includes('openrouter/quasar-alpha')) modelDescription = 'OpenRouter Quasar Alpha - специально для кода';
+    else if (lastModel.includes('microsoft/phi-4-mini')) modelDescription = 'Microsoft Phi-4 Mini - компактная, быстрая';
+    else if (lastModel.includes('google/gemma-4-26b-a4b-it')) modelDescription = 'Google Gemma 4 26B - экономичная, 256K контекста';
+    else if (lastModel.includes('openrouter/free')) modelDescription = 'OpenRouter Free - стандартная бесплатная модель';
+    else modelDescription = 'Бесплатная модель с автовыбором';
+    
     bot.sendMessage(msg.chat.id,
         `🤖 *ТЕКУЩАЯ МОДЕЛЬ*\n` +
         `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `🔹 *Используемая модель:*\n` +
         `\`${lastModel}\`\n\n` +
+        `📝 *Описание:* ${modelDescription}\n\n` +
         `📊 *Как выбирается модель:*\n` +
         `• Анализирую сложность запроса\n` +
         `• Оцениваю длину текста\n` +
         `• Проверяю наличие кода\n` +
-        `• Понимаю логические задачи\n\n` +
-        `🏆 *Доступные бесплатные модели:*\n` +
-        `• Tencent Hy3 Preview (295B, 256K контекста) - ТОП-1\n` +
-        `• Google Gemma 4 31B (256K, 140+ языков)\n` +
-        `• DeepSeek V4 Flash (1M контекста, быстрая)\n` +
-        `• NVIDIA Nemotron 3 Super (1M контекста, для агентов)\n` +
-        `• Qwen 3.6 Plus Preview (1M контекста, код)\n` +
-        `• Xiaomi MiMo V2 Pro (1M контекста)\n\n` +
-        `✨ *Все модели бесплатны и с поддержкой интернета!*`,
+        `• Понимаю логические задачи\n` +
+        `• Для актуальных вопросов - топовые модели с :online\n\n` +
+        `✨ *Все модели бесплатны!*`,
         { parse_mode: 'Markdown' }
     );
 });
