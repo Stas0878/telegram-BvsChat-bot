@@ -19,7 +19,7 @@ if (!process.env.FROM_RESTART) {
                     detached: true,
                     stdio: 'inherit'
                 });
-            }, 2000);
+            }, 9000);
         }
     });
 }
@@ -87,7 +87,7 @@ async function searchInternet(query) {
                     { role: 'user', content: `Найди актуальную информацию: ${query}. Дай ответ с работающими ссылками.` }
                 ],
                 temperature: 0.5,
-                max_tokens: 99999
+                max_tokens: 4000
             },
             {
                 headers: {
