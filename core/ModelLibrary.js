@@ -25,13 +25,14 @@ class ModelLibrary {
       'openrouter/quasar-alpha:online',
       'nvidia/nemotron-3-super:free:online',
     ],
-    VERY_COMPLEX: [
+        VERY_COMPLEX: [
       'tencent/hy3-preview:free:online',
+      'xiaomi/mimo-v2.5-pro:free',           // Флагман Xiaomi (агенты, код)
+      'xiaomi/mimo-v2.5:free',               // Мультимодальная (изо, аудио, видео)
       'nvidia/nemotron-3-super:free:online',
-      'xiaomi/mimo-v2-pro:free:online',
-      'deepseek/deepseek-v3:free:online',
+      'deepseek/deepseek-v4-flash:free:online',
       'qwen/qwen3.6-plus-preview:free:online',
-      'google/gemini-3-pro-preview:free',
+      'google/gemma-4-31b-it:free:online',
     ],
   };  // ← ЗДЕСЬ ЗАКРЫВАЕТСЯ TEXT_MODELS
 
