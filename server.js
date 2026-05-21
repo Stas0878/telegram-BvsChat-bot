@@ -679,51 +679,34 @@ bot.on('message', async (msg) => {
     }
 });
 
-// Команда /image - генерация изображения
+// Команда /image - генерация изображения через Pollinations.ai (бесплатно, без ключа)
 bot.onText(/\/image (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    const prompt = match[1];
+    // Берем полный текст запроса пользователя
+    let prompt = match[1];
     
     await bot.sendChatAction(chatId, 'upload_photo');
-    bot.sendMessage(chatId, `🎨 Генерирую изображение: "${prompt}"...`);
+    bot.sendMessage(chatId, `🎨 Генерирую изображение по запросу: "${prompt.substring(0, 50)}..."`);
     
     try {
-        const response = await axios.post(
-            'https://openrouter.ai/api/v1/chat/completions',
-            {
-                model: 'black-forest-labs/flux-1-schnell:free',
-                messages: [
-                    { role: 'user', content: prompt }
-                ]
-            },
-            {
-                headers: {
-                    'Authorization': `Bearer ${OPENROUTER_KEY}`,
-                    'HTTP-Referer': 'https://t.me/smart_ai_bot',
-                    'X-Title': 'Smart AI Bot'
-                }
-            }
-        );
+        // Кодируем промт для URL и добавляем параметры для лучшего качества
+        // Используем модель 'flux' (рекомендуется для фотореализма) [citation:3][citation:5]
+        const encodedPrompt = encodeURIComponent(prompt);
+        // Задаем размер изображения. 1024x1024 — один из стандартных вариантов [citation:7]
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&nologo=true`;
         
-        let imageUrl = null;
+        console.log(`🖼️ Генерирую изображение по URL: ${imageUrl.substring(0, 100)}...`);
+
+        // Отправляем изображение сразу по URL (без лишних файлов на сервере)
+        await bot.sendPhoto(chatId, imageUrl, { 
+            caption: `✨ *Ваш запрос:* ${prompt}`,
+            parse_mode: 'Markdown' 
+        });
         
-        if (response.data.choices[0].message.images && response.data.choices[0].message.images[0]) {
-            imageUrl = response.data.choices[0].message.images[0].url;
-        } else if (response.data.choices[0].message.content) {
-            const content = response.data.choices[0].message.content;
-            const urlMatch = content.match(/https?:\/\/[^\s]+\.(jpg|png|gif|webp)/i);
-            if (urlMatch) imageUrl = urlMatch[0];
-        }
-        
-        if (imageUrl) {
-            await bot.sendPhoto(chatId, imageUrl, { caption: `✨ ${prompt}` });
-            console.log(`✅ Изображение сгенерировано для: ${prompt}`);
-        } else {
-            bot.sendMessage(chatId, `❌ Не удалось получить изображение. Ответ модели:\n${response.data.choices[0].message.content.substring(0, 200)}`);
-        }
+        console.log(`✅ Изображение успешно отправлено для: ${prompt.substring(0, 50)}`);
     } catch(error) {
-        console.log('❌ Ошибка генерации:', error.response?.data || error.message);
-        bot.sendMessage(chatId, `❌ Ошибка: ${error.response?.data?.error || error.message}`);
+        console.error('❌ Ошибка при генерации изображения:', error);
+        await bot.sendMessage(chatId, `❌ Не удалось сгенерировать изображение. Попробуйте изменить запрос. Ошибка: ${error.message}`);
     }
 });
 
