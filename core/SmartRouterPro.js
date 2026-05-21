@@ -44,7 +44,6 @@ class SuperSmartRouterPro extends EventEmitter {
             }
         } catch (error) {
             this.logger.warn('Failed to fetch models, using fallback', { error: error.message });
-            // Используем ModelLibrary вместо UNLIMITED_FREE_MODELS
             const allModels = Object.values(ModelLibrary.TEXT_MODELS).flat();
             this.availableModels = new Set(allModels);
         }
@@ -56,6 +55,32 @@ class SuperSmartRouterPro extends EventEmitter {
             await new Promise(resolve => setTimeout(resolve, 500));
             waited++;
         }
+        
+        // === ПРОВЕРКА НА АКТУАЛЬНОСТЬ ===
+        const needsCurrentInfo = /обновл|актуальн|последн|сейчас|сегодня|202[5-9]|202[6-9]|текущ|новост|погод|курс|свеж/i.test(prompt);
+        
+        if (needsCurrentInfo) {
+            // Все топовые бесплатные модели с поддержкой интернета
+            const currentModels = [
+                'tencent/hy3-preview:free:online',
+                'google/gemma-4-31b-it:free:online',
+                'deepseek/deepseek-v4-flash:free:online',
+                'nvidia/nemotron-3-super:free:online',
+                'qwen/qwen3.6-plus-preview:free:online',
+                'xiaomi/mimo-v2-pro:free:online',
+                'nvidia/nemotron-3-nano-30b-a3b:free:online',
+                'openrouter/quasar-alpha:online',
+                'microsoft/phi-4-mini:free:online',
+                'google/gemma-4-26b-a4b-it:free:online'
+            ];
+            for (const model of currentModels) {
+                if (this.availableModels.has(model)) {
+                    this.logger.info('Model selected for current info', { model });
+                    return model;
+                }
+            }
+        }
+        // === КОНЕЦ ПРОВЕРКИ ===
         
         // Определяем сложность через AgentTools
         const complexity = forceComplexity || AgentTools.estimateComplexity(prompt);
