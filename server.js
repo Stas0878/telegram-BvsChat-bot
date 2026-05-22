@@ -150,7 +150,7 @@ const mainMenu = {
     }
 };
 
-// Полное меню со всеми командами
+// Полное меню со всеми командами (старое)
 const fullMenu = {
     reply_markup: {
         keyboard: [
@@ -166,6 +166,35 @@ const fullMenu = {
         one_time_keyboard: false
     }
 };
+
+// ========== НОВОЕ МЕНЮ ==========
+const newMenu = {
+    reply_markup: {
+        keyboard: [
+            [{ text: "❓ Что умеет бот" }, { text: "🏠 /start" }],
+            [{ text: "👤 Мой профиль" }, { text: "⭐ Премиум" }],
+            [{ text: "🗑️ Удалить контекст" }, { text: "🎨 /photo" }],
+            [{ text: "🎬 /video" }, { text: "🎵 /music" }],
+            [{ text: "🔍 /search" }, { text: "🤖 /model" }],
+            [{ text: "⚙️ /settings" }, { text: "🆘 /help" }],
+            [{ text: "📜 /privacy" }, { text: "📋 Закрыть новое меню" }]
+        ],
+        resize_keyboard: true,
+        one_time_keyboard: false
+    }
+};
+
+// Кнопка для открытия нового меню
+const newMenuButton = {
+    reply_markup: {
+        keyboard: [
+            [{ text: "📋 Открыть новое меню" }]
+        ],
+        resize_keyboard: true,
+        one_time_keyboard: false
+    }
+};
+// ========== КОНЕЦ НОВОГО МЕНЮ ==========
 
 app.get('/', (req, res) => {
     res.send('Бот работает с феноменальной памятью!');
@@ -187,7 +216,7 @@ bot.onText(/\/start/, (msg) => {
     
     bot.sendMessage(chatId, 
         `🤖 *Добро пожаловать в Smart AI Bot!*\n\n` +
-        `👇 *Нажми на кнопку "Открыть меню" ниже!*`,
+        `👇 *Нажми на кнопку "Открыть меню" или "Открыть новое меню" ниже!*`,
         { parse_mode: 'Markdown', reply_markup: mainMenu.reply_markup }
     );
 });
@@ -211,7 +240,7 @@ bot.onText(/\/model/, async (msg) => {
     bot.sendMessage(msg.chat.id,
         `🤖 *ТЕКУЩАЯ МОДЕЛЬ*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `🔹 *Используется:* умный выбор из 25+ бесплатных моделей\n` +
-        `✨ *Все модели бесплатны и с поддержкой интернета!*`,
+        `✨ *Все модели бесплатны!*`,
         { parse_mode: 'Markdown' }
     );
 });
@@ -229,21 +258,20 @@ bot.onText(/\/search (.+)/, async (msg, match) => {
 // Команда /code
 bot.onText(/\/code (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    const task = match[1];
+    const fullQuery = match[1];
+    
+    let language = 'python';
+    let task = fullQuery;
+    
+    const langMatch = fullQuery.match(/--lang (\w+)/);
+    if (langMatch) {
+        language = langMatch[1];
+        task = fullQuery.replace(/--lang \w+/, '').trim();
+    }
     
     await bot.sendChatAction(chatId, 'typing');
-    
-    try {
-        const prompt = `Напиши код на Python для: ${task}. Дай только код и краткое объяснение.`;
-        const response = await router.chat(prompt);
-        const answer = response.choices[0].message.content;
-        
-        await bot.sendMessage(chatId, answer, { parse_mode: 'Markdown' });
-        console.log(`✅ Код отправлен для: ${task}`);
-    } catch(error) {
-        console.log('❌ Ошибка кода:', error.message);
-        await bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
-    }
+    const code = await generateCode(task, language);
+    bot.sendMessage(chatId, code, { parse_mode: 'Markdown' });
 });
 
 // Команда /memory
@@ -341,12 +369,23 @@ bot.onText(/\/date/, (msg) => {
 // Команда /help
 bot.onText(/\/help/, (msg) => {
     bot.sendMessage(msg.chat.id,
-        `🆘 *ПОМОЩЬ*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n📋 *Основные команды:*\n• /start - Запуск бота\n• /stats - Статистика\n• /model - Текущая модель\n• /memory - Память диалогов\n• /search [текст] - Поиск в интернете\n• /code [задача] - Генерация кода\n• /gemini [вопрос] - Google Gemini\n• /tools - Все инструменты\n• /help - Эта справка\n\n✨ *Я помню всё!*`,
+        `🆘 *ПОМОЩЬ*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `📋 *Основные команды:*\n` +
+        `• /start - Запуск бота\n` +
+        `• /stats - Статистика\n` +
+        `• /model - Текущая модель\n` +
+        `• /memory - Память диалогов\n` +
+        `• /search [текст] - Поиск в интернете\n` +
+        `• /code [задача] - Генерация кода\n` +
+        `• /gemini [вопрос] - Google Gemini\n` +
+        `• /tools - Все инструменты\n` +
+        `• /help - Эта справка\n\n` +
+        `✨ *Я помню всё!*`,
         { parse_mode: 'Markdown' }
     );
 });
 
-// Команда /gemini - через OpenRouter
+// Команда /gemini
 bot.onText(/\/gemini (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const prompt = match[1];
@@ -366,7 +405,7 @@ bot.onText(/\/gemini (.+)/, async (msg, match) => {
     }
 });
 
-// Команда /image - генерация изображения
+// Команда /image
 bot.onText(/\/image (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const prompt = match[1];
@@ -384,7 +423,7 @@ bot.onText(/\/image (.+)/, async (msg, match) => {
     }
 });
 
-// Обработка кнопок и сообщений
+// ========== ОБРАБОТКА КНОПОК И СООБЩЕНИЙ ==========
 bot.on('message', async (msg) => {
     if (!msg.text) return;
     
@@ -392,14 +431,120 @@ bot.on('message', async (msg) => {
     const userId = msg.from.id;
     const text = msg.text;
     
+    // ========== НОВОЕ МЕНЮ ==========
+    if (text === '📋 Открыть новое меню') {
+        bot.sendMessage(chatId, '📋 *Новое меню команд:*', {
+            parse_mode: 'Markdown',
+            reply_markup: newMenu.reply_markup
+        });
+        return;
+    }
+    
+    if (text === '📋 Закрыть новое меню') {
+        bot.sendMessage(chatId, '🔼 *Новое меню закрыто*', {
+            parse_mode: 'Markdown',
+            reply_markup: mainMenu.reply_markup
+        });
+        return;
+    }
+    
+    // Обработка кнопок нового меню
+    if (text === '❓ Что умеет бот') {
+        bot.sendMessage(chatId, '✨ *Я умею:*\n• Отвечать на вопросы\n• Генерировать код\n• Искать в интернете\n• Создавать изображения\n• Помнить диалоги\n• И многое другое!', { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '🏠 /start') {
+        bot.sendMessage(chatId, '🤖 Бот перезапущен! Используйте /start для начала.', { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '👤 Мой профиль') {
+        bot.sendMessage(chatId, `👤 *Ваш профиль*\n━━━━━━━━━━━━━━━━━━━\n🆔 ID: ${userId}\n📛 Имя: ${msg.from.first_name || '?'}\n🧠 Память: ${getUserMemory(userId).length} сообщений`, { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '⭐ Премиум') {
+        bot.sendMessage(chatId, '⭐ *Премиум функции*\n━━━━━━━━━━━━━━━━━━━\n\nСкоро будут доступны!\n• Больше запросов\n• Приоритетная обработка\n• Эксклюзивные модели', { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '🗑️ Удалить контекст') {
+        userMemory.set(userId, []);
+        bot.sendMessage(chatId, '🗑️ *История диалога очищена!*', { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '🎨 /photo') {
+        bot.sendMessage(chatId, '🎨 *Генерация изображений*\n━━━━━━━━━━━━━━━━━━━\n\nИспользуйте: /image [описание]\n\n📝 Пример: /image кот в космосе', { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '🎬 /video') {
+        bot.sendMessage(chatId, '🎬 *Генерация видео*\n━━━━━━━━━━━━━━━━━━━\n\nСкоро будет доступно!', { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '🎵 /music') {
+        bot.sendMessage(chatId, '🎵 *Генерация музыки*\n━━━━━━━━━━━━━━━━━━━\n\nСкоро будет доступно!', { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '🔍 /search') {
+        bot.sendMessage(chatId, '🔍 *Поиск в интернете*\n━━━━━━━━━━━━━━━━━━━\n\nИспользуйте: /search [запрос]\n\n🌐 Пример: /search погода в Москве', { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '🤖 /model') {
+        const lastModel = router.lastUsedModel || 'openrouter/free';
+        bot.sendMessage(chatId, `🤖 *Текущая модель*\n━━━━━━━━━━━━━━━━━━━\n\n\`${lastModel}\`\n\nИспользуйте /model для подробностей`, { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '⚙️ /settings') {
+        const settings = userSettings.get(userId) || { language: 'ru', voiceEnabled: false };
+        bot.sendMessage(chatId, `⚙️ *Настройки*\n━━━━━━━━━━━━━━━━━━━\n\n🌐 Язык: ${settings.language === 'ru' ? 'Русский' : 'English'}\n🎤 Голос: ${settings.voiceEnabled ? 'Вкл' : 'Выкл'}\n🧠 Память: ${getUserMemory(userId).length} сообщений`, { parse_mode: 'Markdown' });
+        return;
+    }
+    
+    if (text === '🆘 /help') {
+        bot.sendMessage(chatId, 
+            `🆘 *Помощь*\n━━━━━━━━━━━━━━━━━━━\n\n📋 *Основные команды:*\n` +
+            `• /start - Запуск бота\n` +
+            `• /stats - Статистика\n` +
+            `• /model - Текущая модель\n` +
+            `• /memory - Память диалогов\n` +
+            `• /search [текст] - Поиск в интернете\n` +
+            `• /code [задача] - Генерация кода\n` +
+            `• /gemini [вопрос] - Google Gemini\n` +
+            `• /image [описание] - Создать изображение\n` +
+            `• /help - Эта справка`,
+            { parse_mode: 'Markdown' }
+        );
+        return;
+    }
+    
+    if (text === '📜 /privacy') {
+        bot.sendMessage(chatId, '📜 *Пользовательское соглашение*\n━━━━━━━━━━━━━━━━━━━\n\n✅ Бот использует бесплатные AI модели\n✅ Данные хранятся для памяти диалогов\n❌ Не отправляйте личную информацию\n📧 Контакты: @Stas0878', { parse_mode: 'Markdown' });
+        return;
+    }
+    // ========== КОНЕЦ НОВОГО МЕНЮ ==========
+    
+    // ========== СТАРОЕ МЕНЮ ==========
     // Обработка кнопки открытия/закрытия меню
     if (text === '📋 Открыть меню') {
-        bot.sendMessage(chatId, '🔽 *Полное меню команд:*', { parse_mode: 'Markdown', reply_markup: fullMenu.reply_markup });
+        bot.sendMessage(chatId, '🔽 *Полное меню команд:*', {
+            parse_mode: 'Markdown',
+            reply_markup: fullMenu.reply_markup
+        });
         return;
     }
     
     if (text === '📋 Закрыть меню') {
-        bot.sendMessage(chatId, '🔼 *Меню закрыто*', { parse_mode: 'Markdown', reply_markup: mainMenu.reply_markup });
+        bot.sendMessage(chatId, '🔼 *Меню закрыто*', {
+            parse_mode: 'Markdown',
+            reply_markup: mainMenu.reply_markup
+        });
         return;
     }
     
@@ -472,9 +617,29 @@ bot.on('message', async (msg) => {
         return;
     }
     
-    if (text === '🤖 Выбрать модель') {
+        if (text === '🤖 Выбрать модель') {
         bot.sendMessage(chatId,
-            `🤖 *ТЕКУЩАЯ МОДЕЛЬ*\n━━━━━━━━━━━━━━━━━━━\n\n✨ *Доступные бесплатные модели:*\n\n🏆 *Топовые:*\n• Tencent Hy3 Preview\n• Google Gemma 4 31B\n• DeepSeek V4 Flash\n• NVIDIA Nemotron 3 Super\n\n✅ *Автовыбор:* Бот сам выбирает лучшую модель под задачу\n📊 *Подробнее:* /model`,
+            `🤖 *ТЕКУЩАЯ МОДЕЛЬ*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `✨ *Доступные бесплатные модели:*\n\n` +
+            `🏆 *Топовые:*\n` +
+            `• Tencent Hy3 Preview (295B параметров, 256K контекста)\n` +
+            `• Google Gemma 4 31B (256K контекста, 140+ языков)\n` +
+            `• DeepSeek V4 Flash (1M контекста, быстрая)\n` +
+            `• NVIDIA Nemotron 3 Super (1M контекста, для агентов)\n` +
+            `• Qwen 3.6 Plus Preview (1M контекста, код и фронтенд)\n\n` +
+            `💻 *Код и программирование:*\n` +
+            `• Qwen 3.6 Plus Preview (1M контекста)\n` +
+            `• Xiaomi MiMo V2 Pro (1M контекста)\n\n` +
+            `⚡ *Быстрые ответы:*\n` +
+            `• NVIDIA Nemotron Nano\n` +
+            `• Microsoft Phi-4 Mini\n\n` +
+            `🔍 *С интернет-поиском:*\n` +
+            `• Все модели с суффиксом :online\n\n` +
+            `🤖 *Google AI (Gemini 2.0 Flash):*\n` +
+            `• Отдельная команда /gemini\n\n` +
+            `✅ *Автовыбор:* Бот сам выбирает лучшую модель под задачу\n` +
+            `📊 *Подробнее:* /model`,
             { parse_mode: 'Markdown' }
         );
         return;
@@ -503,50 +668,26 @@ bot.on('message', async (msg) => {
         bot.sendMessage(chatId, `📜 *СОГЛАШЕНИЕ*\n━━━━━━━━━━━━━━━━━━━\n\n✅ Бот использует бесплатные AI модели\n❌ Не отправляйте личную информацию\n📧 Контакты: @Stas0878`, { parse_mode: 'Markdown' });
         return;
     }
+    // ========== КОНЕЦ СТАРОГО МЕНЮ ==========
     
     // Пропускаем команды
     if (text.startsWith('/')) return;
     
-    // Обычные сообщения с fallback цепочкой
+    // Обычные сообщения
     try {
         const thinkingMsg = await bot.sendMessage(chatId, '🤔 *Думаю...*', { parse_mode: 'Markdown' });
         addToMemory(userId, 'user', text);
         const contextMessage = getDialogContext(userId, text);
-        
-        const fallbackModels = [
-            'google/gemma-4-31b-it:free:online',
-            'deepseek/deepseek-v4-flash:free:online',
-            'qwen/qwen3.6-plus-preview:free:online',
-            'tencent/hy3-preview:free:online',
-            'xiaomi/mimo-v2.5-pro:free'
-        ];
-        
-        let answer = null;
-        let usedModel = null;
-        
-        for (const model of fallbackModels) {
-            try {
-                const response = await router.chat(contextMessage, { model: model });
-                const candidateAnswer = response.choices[0].message.content;
-                if (candidateAnswer && candidateAnswer !== 'null' && candidateAnswer.trim() !== '') {
-                    answer = candidateAnswer;
-                    usedModel = model;
-                    break;
-                }
-            } catch(e) {}
-        }
-        
-        if (!answer) {
-            answer = "Извините, все модели временно недоступны. Попробуйте позже.";
-            usedModel = "none";
-        }
-        
+        const response = await router.chat(contextMessage);
+        const answer = response.choices[0].message.content;
         addToMemory(userId, 'assistant', answer);
-        router.lastUsedModel = usedModel;
+        router.lastUsedModel = response.model;
+        
         await bot.deleteMessage(chatId, thinkingMsg.message_id);
         
-        const modelInfo = `\n\n---\n🤖 *Модель:* \`${usedModel}\``;
+        const modelInfo = `\n\n---\n🤖 *Модель:* \`${response.model}\``;
         await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
+        console.log(`✅ Ответ отправлен, модель: ${response.model}`);
     } catch(error) {
         console.log('❌ ОШИБКА:', error.message);
         await bot.sendMessage(chatId, '❌ Ошибка, попробуйте позже');
