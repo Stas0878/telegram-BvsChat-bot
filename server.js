@@ -19,7 +19,7 @@ if (!process.env.FROM_RESTART) {
                     detached: true,
                     stdio: 'inherit'
                 });
-            }, 9999);
+            }, 2000);
         }
     });
 }
@@ -87,7 +87,7 @@ async function searchInternet(query) {
                     { role: 'user', content: `Найди актуальную информацию: ${query}. Дай ответ с работающими ссылками.` }
                 ],
                 temperature: 0.5,
-                max_tokens: 9999
+                max_tokens: 4000
             },
             {
                 headers: {
@@ -156,11 +156,11 @@ const fullMenu = {
         keyboard: [
             [{ text: "🤖 Что умеет бот" }, { text: "📊 Статистика" }],
             [{ text: "👤 Мой профиль" }, { text: "🔧 Tools" }],
-            [{ text: "✨ Gemini" }, { text: "🎨 Создать изображение" }],  // ← НОВАЯ КНОПКА
+            [{ text: "✨ Gemini" }, { text: "🎨 Создать изображение" }],
             [{ text: "🎵 Создать музыку" }, { text: "🎬 Создать видео" }],
-            [{ text: "🔍 Интернет-поиск" }, { text: "⚙️ Настройки" }],
-            [{ text: "🗑️ Удалить контекст" }, { text: "📜 Соглашение" }],
-            [{ text: "📋 Закрыть меню" }]
+            [{ text: "🔍 Интернет-поиск" }, { text: "🤖 Выбрать модель" }],
+            [{ text: "⚙️ Настройки" }, { text: "🗑️ Удалить контекст" }],
+            [{ text: "📜 Соглашение" }, { text: "📋 Закрыть меню" }]
         ],
         resize_keyboard: true,
         one_time_keyboard: false
@@ -181,21 +181,12 @@ bot.onText(/\/start/, (msg) => {
             language: 'ru',
             voiceEnabled: false,
             temperature: 0.7,
-            maxTokens: 99948
+            maxTokens: 2048
         });
     }
     
     bot.sendMessage(chatId, 
         `🤖 *Добро пожаловать в Smart AI Bot!*\n\n` +
-        `✨ *Мои возможности:*\n` +
-        `• 🧠 *Феноменальная память* - запоминаю ВСЕ диалоги (до ${MAX_MEMORY} сообщений)\n` +
-        `• 💻 *Программирование* - пишу код на любом языке\n` +
-        `• 🔍 *Интернет поиск* - ищу актуальную информацию с ссылками\n` +
-        `• 🌐 *Мультиязычность* - отвечаю на русском и английском\n` +
-        `• 🎤 *Голосовое сопровождение* - могу озвучивать ответы\n` +
-        `• 📊 *Статистика* - слежу за использованием\n` +
-        `• 🤖 *Умный выбор модели* - автоматически выбираю лучшую AI\n` +
-        `• 🔧 *Инструменты* - калькулятор, анализ текста, шифрование и многое другое\n\n` +
         `👇 *Нажми на кнопку "Открыть меню" ниже!*`,
         { parse_mode: 'Markdown', reply_markup: mainMenu.reply_markup }
     );
@@ -203,64 +194,24 @@ bot.onText(/\/start/, (msg) => {
 
 // Команда /stats
 bot.onText(/\/stats/, async (msg) => {
-    const chatId = msg.chat.id;
-    const userId = msg.from.id;
     const stats = router.getStats();
-    const memory = getUserMemory(userId);
-    const settings = userSettings.get(userId) || { language: 'ru', voiceEnabled: false };
-    
-    bot.sendMessage(chatId,
-        `📊 *СТАТИСТИКА БОТА*\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+    const memory = getUserMemory(msg.from.id);
+    bot.sendMessage(msg.chat.id, 
+        `📊 *СТАТИСТИКА БОТА*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `📨 *Всего запросов:* ${stats.totalRequests}\n` +
         `🔤 *Всего токенов:* ${stats.totalTokens?.toLocaleString() || 0}\n` +
         `📈 *Среднее токенов:* ${stats.averageTokensPerRequest || 0}\n` +
-        `💸 *Бесплатных моделей:* ${stats.freeModelsUsed || 25}+\n\n` +
-        `🧠 *Память диалогов:*\n` +
-        `• Сохранено сообщений: ${memory.length}/${MAX_MEMORY}\n` +
-        `• Помню последние ${Math.min(20, memory.length)} сообщений\n\n` +
-        `⚙️ *Ваши настройки:*\n` +
-        `• 🌐 Язык: ${settings.language === 'ru' ? 'Русский' : 'English'}\n` +
-        `• 🎤 Голос: ${settings.voiceEnabled ? 'Включен' : 'Выключен'}\n` +
-        `• 🌡️ Температура: ${settings.temperature}\n\n` +
-        `🆓 *Доступно:* 25+ бесплатных моделей\n` +
-        `⚡ *Работаю 24/7 с полной памятью!*`,
+        `🧠 *Память:* ${memory.length}/${MAX_MEMORY} сообщений`,
         { parse_mode: 'Markdown' }
     );
 });
 
 // Команда /model
 bot.onText(/\/model/, async (msg) => {
-    const lastModel = router.lastUsedModel || 'openrouter/free';
-    
-    // Получаем дополнительную информацию о модели
-    let modelDescription = '';
-    if (lastModel.includes('tencent/hy3-preview')) modelDescription = 'Tencent Hy3 Preview - 295B параметров, 256K контекста, топ-1 бесплатная модель';
-    else if (lastModel.includes('google/gemma-4-31b')) modelDescription = 'Google Gemma 4 31B - 256K контекста, 140+ языков, мультимодальная';
-    else if (lastModel.includes('deepseek/deepseek-v4-flash')) modelDescription = 'DeepSeek V4 Flash - 284B параметров, 1M контекста, быстрая';
-    else if (lastModel.includes('nvidia/nemotron-3-super')) modelDescription = 'NVIDIA Nemotron 3 Super - 120B параметров, 1M контекста, для агентов';
-    else if (lastModel.includes('qwen/qwen3.6-plus-preview')) modelDescription = 'Qwen 3.6 Plus Preview - 1M контекста, код и фронтенд';
-    else if (lastModel.includes('xiaomi/mimo-v2-pro')) modelDescription = 'Xiaomi MiMo V2 Pro - 1M контекста, флагманская модель';
-    else if (lastModel.includes('nvidia/nemotron-3-nano-30b-a3b')) modelDescription = 'NVIDIA Nemotron 3 Nano - 30B параметров, сбалансированная';
-    else if (lastModel.includes('openrouter/quasar-alpha')) modelDescription = 'OpenRouter Quasar Alpha - специально для кода';
-    else if (lastModel.includes('microsoft/phi-4-mini')) modelDescription = 'Microsoft Phi-4 Mini - компактная, быстрая';
-    else if (lastModel.includes('google/gemma-4-26b-a4b-it')) modelDescription = 'Google Gemma 4 26B - экономичная, 256K контекста';
-    else if (lastModel.includes('openrouter/free')) modelDescription = 'OpenRouter Free - стандартная бесплатная модель';
-    else modelDescription = 'Бесплатная модель с автовыбором';
-    
     bot.sendMessage(msg.chat.id,
-        `🤖 *ТЕКУЩАЯ МОДЕЛЬ*\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `🔹 *Используемая модель:*\n` +
-        `\`${lastModel}\`\n\n` +
-        `📝 *Описание:* ${modelDescription}\n\n` +
-        `📊 *Как выбирается модель:*\n` +
-        `• Анализирую сложность запроса\n` +
-        `• Оцениваю длину текста\n` +
-        `• Проверяю наличие кода\n` +
-        `• Понимаю логические задачи\n` +
-        `• Для актуальных вопросов - топовые модели с :online\n\n` +
-        `✨ *Все модели бесплатны!*`,
+        `🤖 *ТЕКУЩАЯ МОДЕЛЬ*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `🔹 *Используется:* умный выбор из 25+ бесплатных моделей\n` +
+        `✨ *Все модели бесплатны и с поддержкой интернета!*`,
         { parse_mode: 'Markdown' }
     );
 });
@@ -278,116 +229,56 @@ bot.onText(/\/search (.+)/, async (msg, match) => {
 // Команда /code
 bot.onText(/\/code (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    const task = match[1];
+    const fullQuery = match[1];
+    
+    let language = 'python';
+    let task = fullQuery;
+    
+    const langMatch = fullQuery.match(/--lang (\w+)/);
+    if (langMatch) {
+        language = langMatch[1];
+        task = fullQuery.replace(/--lang \w+/, '').trim();
+    }
     
     await bot.sendChatAction(chatId, 'typing');
-    
-    try {
-        const prompt = `Напиши код на Python для задачи: ${task}. Дай рабочий код с комментариями на русском языке. Пример использования в конце.`;
-        const response = await router.chat(prompt);
-        const answer = response.choices[0].message.content;
-        
-        await bot.sendMessage(chatId, answer, { parse_mode: 'Markdown' });
-        console.log(`✅ Код отправлен для: ${task}`);
-    } catch(error) {
-        console.log('❌ Ошибка кода:', error.message);
-        await bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
-    }
-});
-
-// Команда /lang
-bot.onText(/\/lang (.+)/, (msg, match) => {
-    const chatId = msg.chat.id;
-    const userId = msg.from.id;
-    const lang = match[1].toLowerCase();
-    
-    const settings = userSettings.get(userId) || { language: 'ru', voiceEnabled: false };
-    
-    if (lang === 'ru' || lang === 'en') {
-        settings.language = lang;
-        userSettings.set(userId, settings);
-        bot.sendMessage(chatId, `🌐 Язык изменен на ${lang === 'ru' ? 'Русский' : 'English'}`);
-    } else {
-        bot.sendMessage(chatId, `❌ Поддерживаемые языки: ru, en`);
-    }
-});
-
-// Команда /voice
-bot.onText(/\/voice/, (msg) => {
-    const chatId = msg.chat.id;
-    const userId = msg.from.id;
-    const settings = userSettings.get(userId) || { language: 'ru', voiceEnabled: false };
-    
-    settings.voiceEnabled = !settings.voiceEnabled;
-    userSettings.set(userId, settings);
-    
-    bot.sendMessage(chatId, 
-        settings.voiceEnabled ? 
-        '🎤 Голосовое сопровождение ВКЛЮЧЕНО! Я буду озвучивать ответы.' : 
-        '🎤 Голосовое сопровождение ВЫКЛЮЧЕНО.'
-    );
+    const code = await generateCode(task, language);
+    bot.sendMessage(chatId, code, { parse_mode: 'Markdown' });
 });
 
 // Команда /memory
 bot.onText(/\/memory/, (msg) => {
-    const userId = msg.from.id;
-    const memory = getUserMemory(userId);
-    
-    let lastDialogs = 'Пока нет диалогов';
-    if (memory.length > 0) {
-        lastDialogs = memory.slice(-5).map(m => 
-            `• ${m.role === 'user' ? '👤' : '🤖'}: ${m.content.substring(0, 50)}...`
-        ).join('\n');
-    }
-    
-    bot.sendMessage(msg.chat.id,
-        `🧠 *ФЕНОМЕНАЛЬНАЯ ПАМЯТЬ*\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `📝 *Статистика памяти:*\n` +
-        `• Всего сообщений: ${memory.length}\n` +
-        `• Максимум: ${MAX_MEMORY}\n` +
-        `• Свободно: ${MAX_MEMORY - memory.length}\n\n` +
-        `📋 *Последние диалоги:*\n${lastDialogs}\n\n` +
-        `✨ *Я помню всё, что мы обсуждали!*`,
-        { parse_mode: 'Markdown' }
-    );
+    const memory = getUserMemory(msg.from.id);
+    bot.sendMessage(msg.chat.id, `🧠 *ПАМЯТЬ*\n━━━━━━━━━━━━━━━━━━━\n\n• Сообщений: ${memory.length}/${MAX_MEMORY}`, { parse_mode: 'Markdown' });
 });
 
 // Команда /tools
 bot.onText(/\/tools/, (msg) => {
     bot.sendMessage(msg.chat.id,
-        `🔧 *ДОСТУПНЫЕ ИНСТРУМЕНТЫ*\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `🧮 \`/calc 2+2*10\` - Калькулятор\n` +
-        `📊 \`/analyze текст\` - Анализ текста (слова, буквы)\n` +
-        `✅ \`/validate email@test.ru\` - Проверка email\n` +
-        `🔐 \`/encode текст\` - Base64 кодирование\n` +
-        `🔓 \`/decode dGV4dA==\` - Base64 декодирование\n` +
-        `🔗 \`/url https://google.com\` - Проверка URL\n` +
-        `🎲 \`/random 1 100\` - Случайное число\n` +
-        `📅 \`/date\` - Текущая дата\n` +
-        `🔢 \`/stats\` - Статистика бота\n` +
-        `🧠 \`/memory\` - Память диалогов\n` +
-        `🔍 \`/search запрос\` - Поиск в интернете\n` +
-        `💻 \`/code задача\` - Генерация кода\n` +
-        `🤖 \`/model\` - Текущая модель AI\n\n` +
-        `✨ *Все инструменты бесплатны!*`,
+        `🔧 *ДОСТУПНЫЕ ИНСТРУМЕНТЫ*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `🧮 /calc - Калькулятор\n` +
+        `📊 /analyze - Анализ текста\n` +
+        `✅ /validate - Проверка email\n` +
+        `🔐 /encode - Base64 кодирование\n` +
+        `🔓 /decode - Base64 декодирование\n` +
+        `🔗 /url - Проверка URL\n` +
+        `🎲 /random - Случайное число\n` +
+        `📅 /date - Текущая дата\n` +
+        `✨ /gemini вопрос - Google Gemini 2.0 Flash\n\n` +
+        `✨ *Все команды бесплатны!*`,
         { parse_mode: 'Markdown' }
     );
 });
 
 // Команда /calc
 bot.onText(/\/calc (.+)/, (msg, match) => {
-    const expression = match[1];
     try {
-        const result = eval(expression);
+        const result = eval(match[1]);
         bot.sendMessage(msg.chat.id, `🧮 *Результат:* ${result}`, { parse_mode: 'Markdown' });
     } catch(e) {
         bot.sendMessage(msg.chat.id, `❌ Ошибка: ${e.message}`);
     }
 });
 
-// ========== НОВЫЕ КОМАНДЫ ==========
 // Команда /analyze
 bot.onText(/\/analyze (.+)/, (msg, match) => {
     const text = match[1];
@@ -397,11 +288,7 @@ bot.onText(/\/analyze (.+)/, (msg, match) => {
     const sentences = text.split(/[.!?]+/).filter(s => s.length > 0).length;
     
     bot.sendMessage(msg.chat.id,
-        `📊 *АНАЛИЗ ТЕКСТА*\n━━━━━━━━━━━━━━━━━━━\n` +
-        `📝 Слов: ${words}\n` +
-        `🔤 Символов: ${chars}\n` +
-        `📏 Без пробелов: ${charsNoSpaces}\n` +
-        `📖 Предложений: ${sentences}`,
+        `📊 *АНАЛИЗ ТЕКСТА*\n━━━━━━━━━━━━━━━━━━━\n📝 Слов: ${words}\n🔤 Символов: ${chars}\n📏 Без пробелов: ${charsNoSpaces}\n📖 Предложений: ${sentences}`,
         { parse_mode: 'Markdown' }
     );
 });
@@ -410,10 +297,7 @@ bot.onText(/\/analyze (.+)/, (msg, match) => {
 bot.onText(/\/validate (.+)/, (msg, match) => {
     const email = match[1];
     const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    bot.sendMessage(msg.chat.id, 
-        isValid ? '✅ *Email корректен*' : '❌ *Неверный формат email*',
-        { parse_mode: 'Markdown' }
-    );
+    bot.sendMessage(msg.chat.id, isValid ? '✅ *Email корректен*' : '❌ *Неверный формат email*', { parse_mode: 'Markdown' });
 });
 
 // Команда /encode
@@ -436,10 +320,7 @@ bot.onText(/\/decode (.+)/, (msg, match) => {
 bot.onText(/\/url (.+)/, (msg, match) => {
     const url = match[1];
     const isValid = /^https?:\/\/.+/.test(url);
-    bot.sendMessage(msg.chat.id, 
-        isValid ? '✅ *URL корректен*' : '❌ *Неверный формат URL (нужен http:// или https://)*',
-        { parse_mode: 'Markdown' }
-    );
+    bot.sendMessage(msg.chat.id, isValid ? '✅ *URL корректен*' : '❌ *Неверный формат URL (нужен http:// или https://)*', { parse_mode: 'Markdown' });
 });
 
 // Команда /random
@@ -455,26 +336,51 @@ bot.onText(/\/date/, (msg) => {
     const now = new Date();
     bot.sendMessage(msg.chat.id, `📅 *Текущая дата и время:*\n${now.toLocaleString('ru-RU')}`, { parse_mode: 'Markdown' });
 });
-// ========== КОНЕЦ НОВЫХ КОМАНД ==========
 
 // Команда /help
 bot.onText(/\/help/, (msg) => {
     bot.sendMessage(msg.chat.id,
-        `🆘 *ПОМОЩЬ*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `📋 *Основные команды:*\n` +
-        `• /start - Запуск бота\n` +
-        `• /stats - Статистика использования\n` +
-        `• /model - Текущая модель AI\n` +
-        `• /memory - Память диалогов\n` +
-        `• /search [текст] - Поиск в интернете\n` +
-        `• /code [задача] - Генерация кода\n` +
-        `• /lang [ru/en] - Выбор языка\n` +
-        `• /voice - Голосовое сопровождение\n` +
-        `• /tools - Все инструменты\n` +
-        `• /help - Эта справка\n\n` +
-        `✨ *Я помню всё! Можешь продолжать диалоги.*`,
+        `🆘 *ПОМОЩЬ*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n📋 *Основные команды:*\n• /start - Запуск бота\n• /stats - Статистика\n• /model - Текущая модель\n• /memory - Память диалогов\n• /search [текст] - Поиск в интернете\n• /code [задача] - Генерация кода\n• /gemini [вопрос] - Google Gemini\n• /tools - Все инструменты\n• /help - Эта справка\n\n✨ *Я помню всё!*`,
         { parse_mode: 'Markdown' }
     );
+});
+
+// Команда /gemini - через OpenRouter
+bot.onText(/\/gemini (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const prompt = match[1];
+    
+    await bot.sendChatAction(chatId, 'typing');
+    
+    try {
+        const response = await router.chat(prompt, { model: 'google/gemini-2.0-flash-exp:free' });
+        const answer = response.choices[0].message.content;
+        const modelInfo = `\n\n---\n🤖 *Модель:* Gemini 2.0 Flash (Google, OpenRouter)`;
+        
+        await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
+        console.log(`✅ Gemini ответил: ${prompt.substring(0, 50)}`);
+    } catch(error) {
+        console.error('❌ Ошибка Gemini:', error.message);
+        await bot.sendMessage(chatId, `❌ Ошибка Gemini: ${error.message}`);
+    }
+});
+
+// Команда /image - генерация изображения
+bot.onText(/\/image (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const prompt = match[1];
+    
+    await bot.sendChatAction(chatId, 'upload_photo');
+    bot.sendMessage(chatId, `🎨 Генерирую изображение: "${prompt}"...`);
+    
+    try {
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&model=flux&nologo=true`;
+        await bot.sendPhoto(chatId, imageUrl, { caption: `✨ ${prompt}` });
+        console.log(`✅ Изображение сгенерировано для: ${prompt}`);
+    } catch(error) {
+        console.log('❌ Ошибка генерации:', error.message);
+        bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
+    }
 });
 
 // Обработка кнопок и сообщений
@@ -487,22 +393,16 @@ bot.on('message', async (msg) => {
     
     // Обработка кнопки открытия/закрытия меню
     if (text === '📋 Открыть меню') {
-        bot.sendMessage(chatId, '🔽 *Полное меню команд:*', {
-            parse_mode: 'Markdown',
-            reply_markup: fullMenu.reply_markup
-        });
+        bot.sendMessage(chatId, '🔽 *Полное меню команд:*', { parse_mode: 'Markdown', reply_markup: fullMenu.reply_markup });
         return;
     }
     
     if (text === '📋 Закрыть меню') {
-        bot.sendMessage(chatId, '🔼 *Меню закрыто*', {
-            parse_mode: 'Markdown',
-            reply_markup: mainMenu.reply_markup
-        });
+        bot.sendMessage(chatId, '🔼 *Меню закрыто*', { parse_mode: 'Markdown', reply_markup: mainMenu.reply_markup });
         return;
     }
     
-            // Обработка команды Tools
+    // Обработка команды Tools
     if (text === '🔧 Tools') {
         bot.sendMessage(chatId,
             `🔧 *ДОСТУПНЫЕ ИНСТРУМЕНТЫ*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
@@ -528,11 +428,7 @@ bot.on('message', async (msg) => {
             `Отправьте вопрос после команды:\n` +
             `/gemini [ваш вопрос]\n\n` +
             `📝 *Пример:*\n` +
-            `/gemini Расскажи о теории относительности\n\n` +
-            `🔑 *Особенности:*\n` +
-            `• Быстрые ответы\n` +
-            `• Актуальные знания\n` +
-            `• Бесплатно через OpenRouter`,
+            `/gemini Расскажи о теории относительности`,
             { parse_mode: 'Markdown' }
         );
         return;
@@ -558,60 +454,18 @@ bot.on('message', async (msg) => {
     if (text === '📊 Статистика') {
         const stats = router.getStats();
         const memory = getUserMemory(userId);
-        const settings = userSettings.get(userId) || { language: 'ru', voiceEnabled: false };
-        bot.sendMessage(chatId,
-            `📊 *СТАТИСТИКА*\n━━━━━━━━━━━━━━━━━━━\n` +
-            `📨 Запросов: ${stats.totalRequests}\n` +
-            `🔤 Токенов: ${stats.totalTokens?.toLocaleString() || 0}\n` +
-            `🧠 В памяти: ${memory.length} сообщений\n` +
-            `🌐 Язык: ${settings.language === 'ru' ? 'Русский' : 'English'}\n` +
-            `🎤 Голос: ${settings.voiceEnabled ? 'Вкл' : 'Выкл'}`,
-            { parse_mode: 'Markdown' }
-        );
+        bot.sendMessage(chatId, `📊 *СТАТИСТИКА*\n━━━━━━━━━━━━━━━━━━━\n📨 Запросов: ${stats.totalRequests}\n🔤 Токенов: ${stats.totalTokens?.toLocaleString() || 0}\n🧠 Память: ${memory.length} сообщений`, { parse_mode: 'Markdown' });
         return;
     }
     
     if (text === '👤 Мой профиль') {
-        const settings = userSettings.get(userId) || { language: 'ru', voiceEnabled: false };
-        bot.sendMessage(chatId,
-            `👤 *ПРОФИЛЬ*\n━━━━━━━━━━━━━━━━━━━\n` +
-            `🆔 ID: ${userId}\n` +
-            `📛 Имя: ${msg.from.first_name || '?'}\n` +
-            `🌐 Username: @${msg.from.username || 'нет'}\n` +
-            `🌍 Язык: ${settings.language === 'ru' ? 'Русский' : 'English'}\n` +
-            `🎤 Голос: ${settings.voiceEnabled ? '✅ Включен' : '❌ Выключен'}\n` +
-            `🧠 Память: ${getUserMemory(userId).length} сообщений`,
-            { parse_mode: 'Markdown' }
-        );
+        bot.sendMessage(chatId, `👤 *ПРОФИЛЬ*\n━━━━━━━━━━━━━━━━━━━\n🆔 ID: ${userId}\n📛 Имя: ${msg.from.first_name || '?'}\n🧠 Память: ${getUserMemory(userId).length} сообщений`, { parse_mode: 'Markdown' });
         return;
     }
     
-        if (text === '🤖 Что умеет бот') {
+    if (text === '🤖 Что умеет бот') {
         bot.sendMessage(chatId,
-            `✨ *ВОЗМОЖНОСТИ БОТА*\n━━━━━━━━━━━━━━━━━━━\n\n` +
-            `🧠 *Феноменальная память* - помню ВСЁ\n` +
-            `💻 *Программирование* - пишу код на любом языке\n` +
-            `🔍 *Интернет поиск* - ищу актуальные ссылки\n` +
-            `🌐 *Мультиязычность* - отвечаю на русском/английском\n` +
-            `🎤 *Голосовое сопровождение* - озвучиваю ответы\n` +
-            `📊 *Статистика* - слежу за использованием\n` +
-            `🤖 *Умный выбор модели* - автовыбор лучшей AI`,
-            { parse_mode: 'Markdown' }
-        );
-        return;
-    }
-    
-    if (text === '✨ Gemini') {
-        bot.sendMessage(chatId, 
-            `✨ *Google Gemini 2.0 Flash*\n\n` +
-            `Отправьте вопрос после команды:\n` +
-            `/gemini [ваш вопрос]\n\n` +
-            `📝 *Пример:*\n` +
-            `/gemini Расскажи о теории относительности\n\n` +
-            `🔑 *Особенности:*\n` +
-            `• Быстрые ответы\n` +
-            `• Актуальные знания\n` +
-            `• Бесплатно через Google API`,
+            `✨ *ВОЗМОЖНОСТИ БОТА*\n━━━━━━━━━━━━━━━━━━━\n\n🧠 *Феноменальная память*\n💻 *Программирование*\n🔍 *Интернет поиск*\n🌐 *Мультиязычность*\n🎤 *Голосовое сопровождение*\n📊 *Статистика*\n🤖 *Умный выбор модели*`,
             { parse_mode: 'Markdown' }
         );
         return;
@@ -619,23 +473,7 @@ bot.on('message', async (msg) => {
     
     if (text === '🤖 Выбрать модель') {
         bot.sendMessage(chatId,
-            `🤖 *ТЕКУЩАЯ МОДЕЛЬ*\n━━━━━━━━━━━━━━━━━━━\n\n` +
-            `✨ *Доступные бесплатные модели:*\n\n` +
-            `🏆 *Топовые:*\n` +
-            `• Tencent Hy3 Preview (295B параметров, 256K контекста)\n` +
-            `• Google Gemma 4 31B (256K контекста, 140+ языков)\n` +
-            `• DeepSeek V4 Flash (1M контекста, быстрая)\n` +
-            `• NVIDIA Nemotron 3 Super (1M контекста, для агентов)\n\n` +
-            `💻 *Код и программирование:*\n` +
-            `• Qwen 3.6 Plus Preview (1M контекста)\n` +
-            `• Xiaomi MiMo V2 Pro (1M контекста)\n\n` +
-            `⚡ *Быстрые ответы:*\n` +
-            `• NVIDIA Nemotron Nano\n` +
-            `• Microsoft Phi-4 Mini\n\n` +
-            `🔍 *С интернет-поиском:*\n` +
-            `• Все модели с суффиксом :online\n\n` +
-            `✅ *Автовыбор:* Бот сам выбирает лучшую модель под задачу\n` +
-            `📊 *Подробнее:* /model`,
+            `🤖 *ТЕКУЩАЯ МОДЕЛЬ*\n━━━━━━━━━━━━━━━━━━━\n\n✨ *Доступные бесплатные модели:*\n\n🏆 *Топовые:*\n• Tencent Hy3 Preview\n• Google Gemma 4 31B\n• DeepSeek V4 Flash\n• NVIDIA Nemotron 3 Super\n\n✅ *Автовыбор:* Бот сам выбирает лучшую модель под задачу\n📊 *Подробнее:* /model`,
             { parse_mode: 'Markdown' }
         );
         return;
@@ -644,93 +482,59 @@ bot.on('message', async (msg) => {
     if (text === '⚙️ Настройки') {
         const settings = userSettings.get(userId) || { language: 'ru', voiceEnabled: false };
         bot.sendMessage(chatId,
-            `⚙️ *НАСТРОЙКИ*\n━━━━━━━━━━━━━━━━━━━\n` +
-            `🌐 Язык: ${settings.language === 'ru' ? 'Русский' : 'English'} → /lang\n` +
-            `🎤 Голос: ${settings.voiceEnabled ? 'Вкл' : 'Выкл'} → /voice\n` +
-            `🧠 Память: ${getUserMemory(userId).length} сообщений\n\n` +
-            `🔧 Инструменты: /tools`,
+            `⚙️ *НАСТРОЙКИ*\n━━━━━━━━━━━━━━━━━━━\n🌐 Язык: ${settings.language === 'ru' ? 'Русский' : 'English'} → /lang\n🎤 Голос: ${settings.voiceEnabled ? 'Вкл' : 'Выкл'} → /voice\n🧠 Память: ${getUserMemory(userId).length} сообщений\n\n🔧 Инструменты: /tools`,
             { parse_mode: 'Markdown' }
         );
         return;
     }
     
     if (text === '🎨 Создать изображение') {
-        bot.sendMessage(chatId, 
-            `🎨 *Генерация изображений*\n\n` +
-            `Используйте: /image [описание]\n\n` +
-            `📝 Пример: /image кот в космосе`,
-            { parse_mode: 'Markdown' }
-        );
+        bot.sendMessage(chatId, `🎨 *Генерация изображений*\n\nИспользуйте: /image [описание]\n\n📝 Пример: /image кот в космосе`, { parse_mode: 'Markdown' });
         return;
     }
     
     if (text === '🔍 Интернет-поиск') {
-        bot.sendMessage(chatId,
-            `🔍 *ИНТЕРНЕТ ПОИСК*\n━━━━━━━━━━━━━━━━━━━\n\n` +
-            `📝 Используйте: /search [запрос]\n` +
-            `🌐 Пример: /search погода в Москве\n` +
-            `✨ Ссылки будут кликабельными!`,
-            { parse_mode: 'Markdown' }
-        );
+        bot.sendMessage(chatId, `🔍 *ИНТЕРНЕТ ПОИСК*\n━━━━━━━━━━━━━━━━━━━\n\n📝 Используйте: /search [запрос]`, { parse_mode: 'Markdown' });
         return;
     }
     
     if (text === '📜 Соглашение') {
-        bot.sendMessage(chatId,
-            `📜 *СОГЛАШЕНИЕ*\n━━━━━━━━━━━━━━━━━━━\n\n` +
-            `✅ Бот использует бесплатные AI модели\n` +
-            `✅ Данные хранятся для памяти диалогов\n` +
-            `❌ Не отправляйте личную информацию\n` +
-            `📧 Контакты: @Stas0878`,
-            { parse_mode: 'Markdown' }
-        );
+        bot.sendMessage(chatId, `📜 *СОГЛАШЕНИЕ*\n━━━━━━━━━━━━━━━━━━━\n\n✅ Бот использует бесплатные AI модели\n❌ Не отправляйте личную информацию\n📧 Контакты: @Stas0878`, { parse_mode: 'Markdown' });
         return;
     }
     
-        // Пропускаем команды
+    // Пропускаем команды
     if (text.startsWith('/')) return;
     
-        // Обычные сообщения - с контекстом и памятью
+    // Обычные сообщения с fallback цепочкой
     try {
-        // Отправляем временное сообщение "Думаю..."
         const thinkingMsg = await bot.sendMessage(chatId, '🤔 *Думаю...*', { parse_mode: 'Markdown' });
-        
         addToMemory(userId, 'user', text);
         const contextMessage = getDialogContext(userId, text);
         
-        // Список моделей для fallback (по порядку)
         const fallbackModels = [
-            'google/gemma-4-31b-it:free:online',      // Gemma 4 31B
-            'deepseek/deepseek-v4-flash:free:online',  // DeepSeek V4 Flash
-            'qwen/qwen3.6-plus-preview:free:online',  // Qwen 3.6 Plus
-            'tencent/hy3-preview:free:online',        // Tencent Hy3
-            'xiaomi/mimo-v2.5-pro:free'               // Xiaomi MiMo V2.5 Pro
+            'google/gemma-4-31b-it:free:online',
+            'deepseek/deepseek-v4-flash:free:online',
+            'qwen/qwen3.6-plus-preview:free:online',
+            'tencent/hy3-preview:free:online',
+            'xiaomi/mimo-v2.5-pro:free'
         ];
         
         let answer = null;
         let usedModel = null;
         
-        // Пробуем каждую модель по очереди
         for (const model of fallbackModels) {
             try {
-                console.log(`🔄 Пробуем модель: ${model}`);
                 const response = await router.chat(contextMessage, { model: model });
                 const candidateAnswer = response.choices[0].message.content;
-                
                 if (candidateAnswer && candidateAnswer !== 'null' && candidateAnswer.trim() !== '') {
                     answer = candidateAnswer;
                     usedModel = model;
-                    console.log(`✅ Модель ${model} ответила успешно`);
                     break;
-                } else {
-                    console.log(`⚠️ Модель ${model} вернула пустой ответ`);
                 }
-            } catch(e) {
-                console.log(`❌ Модель ${model} ошиблась: ${e.message}`);
-            }
+            } catch(e) {}
         }
         
-        // Если ни одна модель не ответила
         if (!answer) {
             answer = "Извините, все модели временно недоступны. Попробуйте позже.";
             usedModel = "none";
@@ -738,66 +542,13 @@ bot.on('message', async (msg) => {
         
         addToMemory(userId, 'assistant', answer);
         router.lastUsedModel = usedModel;
-        
-        // Удаляем временное сообщение
         await bot.deleteMessage(chatId, thinkingMsg.message_id);
         
         const modelInfo = `\n\n---\n🤖 *Модель:* \`${usedModel}\``;
         await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
-        console.log(`✅ Ответ отправлен, модель: ${usedModel}`);
     } catch(error) {
         console.log('❌ ОШИБКА:', error.message);
         await bot.sendMessage(chatId, '❌ Ошибка, попробуйте позже');
-    }
-
-// Команда /image - генерация изображения через Pollinations.ai (бесплатно, без ключа)
-bot.onText(/\/image (.+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    // Берем полный текст запроса пользователя
-    let prompt = match[1];
-    
-    await bot.sendChatAction(chatId, 'upload_photo');
-    bot.sendMessage(chatId, `🎨 Генерирую изображение по запросу: "${prompt.substring(0, 50)}..."`);
-    
-    try {
-        // Кодируем промт для URL и добавляем параметры для лучшего качества
-        // Используем модель 'flux' (рекомендуется для фотореализма) [citation:3][citation:5]
-        const encodedPrompt = encodeURIComponent(prompt);
-        // Задаем размер изображения. 1024x1024 — один из стандартных вариантов [citation:7]
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&nologo=true`;
-        
-        console.log(`🖼️ Генерирую изображение по URL: ${imageUrl.substring(0, 100)}...`);
-
-        // Отправляем изображение сразу по URL (без лишних файлов на сервере)
-        await bot.sendPhoto(chatId, imageUrl, { 
-            caption: `✨ *Ваш запрос:* ${prompt}`,
-            parse_mode: 'Markdown' 
-        });
-        
-        console.log(`✅ Изображение успешно отправлено для: ${prompt.substring(0, 50)}`);
-    } catch(error) {
-        console.error('❌ Ошибка при генерации изображения:', error);
-        await bot.sendMessage(chatId, `❌ Не удалось сгенерировать изображение. Попробуйте изменить запрос. Ошибка: ${error.message}`);
-    }
-});
-
-// Команда /gemini - через OpenRouter (без проблем с квотой)
-bot.onText(/\/gemini (.+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const prompt = match[1];
-    
-    await bot.sendChatAction(chatId, 'typing');
-    
-    try {
-        const response = await router.chat(prompt, { model: 'google/gemini-2.0-flash-exp:free' });
-        const answer = response.choices[0].message.content;
-        const modelInfo = `\n\n---\n🤖 *Модель:* Gemini 2.0 Flash (Google, OpenRouter)`;
-        
-        await bot.sendMessage(chatId, answer + modelInfo, { parse_mode: 'Markdown' });
-        console.log(`✅ Gemini ответил: ${prompt.substring(0, 50)}`);
-    } catch(error) {
-        console.error('❌ Ошибка Gemini:', error.message);
-        await bot.sendMessage(chatId, `❌ Ошибка Gemini: ${error.message}`);
     }
 });
 
