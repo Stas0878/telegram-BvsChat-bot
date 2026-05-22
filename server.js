@@ -229,20 +229,21 @@ bot.onText(/\/search (.+)/, async (msg, match) => {
 // Команда /code
 bot.onText(/\/code (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    const fullQuery = match[1];
-    
-    let language = 'python';
-    let task = fullQuery;
-    
-    const langMatch = fullQuery.match(/--lang (\w+)/);
-    if (langMatch) {
-        language = langMatch[1];
-        task = fullQuery.replace(/--lang \w+/, '').trim();
-    }
+    const task = match[1];
     
     await bot.sendChatAction(chatId, 'typing');
-    const code = await generateCode(task, language);
-    bot.sendMessage(chatId, code, { parse_mode: 'Markdown' });
+    
+    try {
+        const prompt = `Напиши код на Python для: ${task}. Дай только код и краткое объяснение.`;
+        const response = await router.chat(prompt);
+        const answer = response.choices[0].message.content;
+        
+        await bot.sendMessage(chatId, answer, { parse_mode: 'Markdown' });
+        console.log(`✅ Код отправлен для: ${task}`);
+    } catch(error) {
+        console.log('❌ Ошибка кода:', error.message);
+        await bot.sendMessage(chatId, `❌ Ошибка: ${error.message}`);
+    }
 });
 
 // Команда /memory
