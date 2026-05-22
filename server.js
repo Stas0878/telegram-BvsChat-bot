@@ -81,13 +81,13 @@ async function searchInternet(query) {
         const response = await axios.post(
             'https://openrouter.ai/api/v1/chat/completions',
             {
-                model: 'openrouter/free',
+                model: 'nvidia/nemotron-nano-12b-v2-vl:free:online',
                 messages: [
-                    { role: 'system', content: 'Ты помощник для поиска информации в интернете. Найди актуальную информацию по запросу. Если есть ссылки - обязательно укажи их в формате [текст](url). Отвечай на русском.' },
-                    { role: 'user', content: `Найди актуальную информацию: ${query}. Дай ответ с работающими ссылками.` }
+                    { role: 'system', content: 'Ты помощник для поиска. Отвечай кратко и по делу. Дай ссылки если есть.' },
+                    { role: 'user', content: `Найди: ${query}. Дай короткий ответ.` }
                 ],
                 temperature: 0.5,
-                max_tokens: 4000
+                max_tokens: 2000
             },
             {
                 headers: {
@@ -100,7 +100,7 @@ async function searchInternet(query) {
         return response.data.choices[0].message.content;
     } catch (error) {
         console.error('Search error:', error.message);
-        return `❌ Ошибка поиска. Попробуйте позже.\n\nВот что я знаю по запросу "${query}":\nИспользуйте Google или Яндекс для поиска актуальной информации.`;
+        return `❌ Ошибка поиска: ${error.message}`;
     }
 }
 
