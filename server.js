@@ -95,7 +95,7 @@ async function searchInternet(query) {
                     }
                 ],
                 temperature: 0.5,
-                max_tokens: 4000
+                max_tokens: 2000
             },
             {
                 headers: {
@@ -162,7 +162,8 @@ const mainMenu = {
             [{ text: "📋 Открыть меню" }]
         ],
         resize_keyboard: true,
-        one_time_keyboard: false
+        one_time_keyboard: false,
+        is_persistent: true  // ← ДОБАВИТЬ ДЛЯ ТЕЛЕФОНА
     }
 };
 
@@ -178,7 +179,9 @@ const fullMenu = {
             [{ text: "📋 Закрыть меню" }]
         ],
         resize_keyboard: true,
-        one_time_keyboard: false
+        one_time_keyboard: false,
+        is_persistent: true,  // ← ДОБАВИТЬ ДЛЯ ТЕЛЕФОНА
+        input_field_placeholder: "📝 Введите сообщение..."  // ← ОПЦИОНАЛЬНО
     }
 };
 // ========== КОНЕЦ МЕНЮ ==========
