@@ -74,7 +74,7 @@ if (!TELEGRAM_TOKEN || !OPENROUTER_KEY) {
 }
 
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
-const router = new SmartRouter(OPENROUTER_KEY);
+const SmartRouter = require('./core/SmartRouterPro');
 
 // ========== РЕАЛЬНЫЙ ПОИСК В ИНТЕРНЕТЕ ==========
 async function searchInternet(query) {
