@@ -22,19 +22,19 @@ class ModelLibrary {
     COMPLEX: [
       'tencent/hy3-preview:free:online',
       'qwen/qwen3.6-plus-preview:free:online',
-      'openrouter/quasar-alpha:online',
       'nvidia/nemotron-3-super:free:online',
+      'deepseek/deepseek-v4-flash:free:online',  // ← добавлено
     ],
-        VERY_COMPLEX: [
+    VERY_COMPLEX: [
       'tencent/hy3-preview:free:online',
-      'xiaomi/mimo-v2.5-pro:free',           // Флагман Xiaomi (агенты, код)
-      'xiaomi/mimo-v2.5:free',               // Мультимодальная (изо, аудио, видео)
-      'nvidia/nemotron-3-super:free:online',
-      'deepseek/deepseek-v4-flash:free:online',
+      'deepseek/deepseek-v4-flash:free:online',      // ← НОВАЯ
+      'nvidia/nemotron-3-super-120b-a12b:free:online', // ← НОВАЯ
       'qwen/qwen3.6-plus-preview:free:online',
       'google/gemma-4-31b-it:free:online',
+      'xiaomi/mimo-v2.5-pro:free',
+      'xiaomi/mimo-v2.5:free',
     ],
-  };  // ← ЗДЕСЬ ЗАКРЫВАЕТСЯ TEXT_MODELS
+  };
 
   // ===== МОДЕЛИ ДЛЯ ИЗОБРАЖЕНИЙ =====
   static IMAGE_MODELS = {
@@ -46,8 +46,7 @@ class ModelLibrary {
     ],
     ANALYSIS: [
       'google/gemini-1.5-pro-vision:free',
-      'google/gemini-3-pro-vision:free',
-      'llava-1.5-vision:free',
+      'llava-1.5-vision:free',           // ← gemini-3-pro-vision удалён (требует ключ)
       'cogvlm-17b:free',
     ],
     EDITING: [
